@@ -1,0 +1,220 @@
+\documentclass[11pt]{book}
+
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{fontspec}
+\setmainfont[
+Path = fonts/, 
+UprightFont = TitilliumWeb-Regular.ttf,
+BoldFont = TitilliumWeb-Bold.ttf,
+ItalicFont = TitilliumWeb-Italic.ttf,
+BoldItalicFont = TitilliumWeb-BoldItalic.ttf
+]{TitilliumWeb}
+
+%\usepackage[utf8]{inputenc}
+%\usepackage{listingsutf8}
+%\lstset{inputencoding=utf8}
+
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepgfplotslibrary{polar}
+\usetikzlibrary{shapes.geometric, 
+	positioning, shapes, backgrounds, arrows.meta, positioning, calc, fit, trees}
+
+\usepackage{amsmath}
+
+\usepackage{tabularx}
+\usepackage[a4paper,outer=3cm,inner=3cm,top=3cm,bottom=3cm]{geometry}
+\usepackage[colorlinks=true, linkcolor=black, citecolor=blue, urlcolor=blue]{hyperref}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\graphicspath{{images/}}
+\usepackage{svg}
+
+\usepackage{subcaption}
+
+\hyphenation{}
+
+\usepackage{listings}
+
+\lstdefinestyle{SqlStyle}{
+	language=SQL,
+	basicstyle=\ttfamily\footnotesize,
+	morekeywords={REAL, TEXT, REFERENCES},
+	keywordstyle=\color{blue},
+	commentstyle=\color{gray},
+	stringstyle=\color{red},
+	breaklines=true,
+	showstringspaces=false,
+	tabsize=2,
+	captionpos=b,
+	numbers=left,
+	numberstyle=\tiny\color{gray},
+	frame=lines,
+	backgroundcolor=\color{lightgray!10},
+	comment=[l]{//},
+	morecomment=[s]{/*}{*/},
+	commentstyle=\color{gray}\ttfamily,
+	string=[s]{'}{'},
+	morestring=[s]{"}{"},
+	%	stringstyle=\color{teal}\ttfamily,
+	%	showstringspaces=false
+}
+
+
+\lstdefinelanguage{json}{
+	basicstyle=\ttfamily\footnotesize,
+	morekeywords={REAL, TEXT, REFERENCES},
+	keywordstyle=\color{blue},
+	commentstyle=\color{gray},
+	stringstyle=\color{red},
+	breaklines=true,
+	showstringspaces=false,
+	tabsize=2,
+	captionpos=b,
+	numbers=left,
+	numberstyle=\tiny\color{gray},
+	frame=lines,
+	backgroundcolor=\color{lightgray!10},
+	comment=[l]{//},
+	morecomment=[s]{/*}{*/},
+	commentstyle=\color{gray}\ttfamily,
+	string=[s]{'}{'},
+	morestring=[s]{"}{"},
+	%	stringstyle=\color{teal}\ttfamily,
+	%	showstringspaces=false
+}
+
+\lstdefinelanguage{bash} {
+	keywords={},
+	basicstyle=\ttfamily\small,
+	keywordstyle=\color{blue}\bfseries,
+	ndkeywords={},
+	ndkeywordstyle=\color{purple}\bfseries,
+	sensitive=true,
+	numbers=left,
+	numberstyle=\tiny\color{gray},
+	breaklines=true,
+	frame=lines,
+	backgroundcolor=\color{lightgray!10},
+	tabsize=2,
+	comment=[l]{\#},
+	morecomment=[s]{/*}{*/},
+	commentstyle=\color{gray}\ttfamily,
+	stringstyle=\color{purple}\ttfamily,
+	showstringspaces=false,
+	morestring=[s]{"}{"}
+}
+
+% Define Java language style for listings
+\lstdefinestyle{JavaScript}{
+	language=Java,
+	basicstyle=\ttfamily\footnotesize,
+	keywordstyle=\color{blue},
+	commentstyle=\color{gray},
+	stringstyle=\color{red},
+	breaklines=true,
+	showstringspaces=false,
+	tabsize=4,
+	captionpos=b,
+	numbers=left,
+	numberstyle=\tiny\color{gray},
+	frame=lines,
+	backgroundcolor=\color{lightgray!10},
+	comment=[l]{//},
+	morecomment=[s]{/*}{*/},
+	commentstyle=\color{gray}\ttfamily,
+	string=[s]{'}{'},
+	morestring=[s]{"}{"},
+	%	stringstyle=\color{teal}\ttfamily,
+	%	showstringspaces=false
+}
+
+\lstdefinestyle{PythonStyle}{
+    language=Python,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=lines,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    backgroundcolor=\color{lightgray!10},
+    tabsize=4,
+    captionpos=b
+}
+
+\usepackage{plantuml}
+
+
+\newcommand{\authors}[1]{{\chapterauthor{#1}\addtocontents{toc}{#1\par}}}
+\newcommand{\HUGE}{\fontsize{40}{48}\selectfont}
+
+\renewcommand{\contentsname}{Daftar Isi}
+\renewcommand{\chaptername}{Bab}
+\renewcommand{\figurename}{Gambar}
+
+\makeatletter
+\newcommand{\chapterauthor}[1]{%
+	{\parindent0pt\vspace*{-25pt}%
+		\linespread{1.1}\large\scshape#1%
+		\par\nobreak\vspace*{35pt}}
+	\@afterheading%
+}
+\makeatother
+
+\begin{document}
+
+
+\begin{titlepage}
+	\begin{tikzpicture}[remember picture, overlay]
+		% Gambar latar belakang atau logo
+		\node[anchor=north west, inner sep=0pt] at ([xshift=.18\textwidth, yshift=-.1\textwidth] current page.north west){
+%			\includegraphics[width=.3\paperwidth]{../figures/logo_universitas.png} 
+		};
+	
+		\node[anchor=north west, inner sep=0pt, opacity=.12] at (current page.north west){
+%			\includegraphics[width=\paperwidth]{../figures/building.png}
+		};
+		
+		% Judul Tengah
+		\node[anchor=center] at ([yshift=.1\textheight]current page.center) {
+			\begin{minipage}{\textwidth}
+				
+				{\LARGE \textbf{Course Module }}\\[0.03\textheight] % Book Type
+				{\HUGE \textcolor{orange}{\textbf{NoSQL with MongoDB}}}\\[.04\textheight] % Title
+%				{\Huge \textcolor{orange}{\textbf{Penggunaan Large-language Model}}}\\[.08\textheight] % Subtitle
+				{\LARGE \textbf{Alfa Yohannis}}\\[0.05\textheight] % Authors
+			\end{minipage}
+		};
+		
+		% Teks bawah dengan latar oranye penuh dan teks putih
+		\node[anchor=south west] at (
+		current page.south west) {
+			\begin{tikzpicture}[remember picture, overlay]
+				\node[anchor=south west, fill=orange, text=white, minimum width=\paperwidth, minimum height=.14\textheight, align=center, font=\Huge\bfseries] at (-.15,-.15) {
+%					Postgraduate Program in Information Technology\\
+%					Pradita University
+				};
+			\end{tikzpicture}
+		};
+	\end{tikzpicture}
+\end{titlepage}
+	
+	% Contents Page
+	\tableofcontents
+	
+	\include{pendahuluan}
+	\include{chapter01}
+	\include{chapter02}
+	\include{chapter03}
+	\include{penutup}
+
+	\backmatter
+	\addcontentsline{toc}{chapter}{Daftar Pustaka}
+	\bibliographystyle{plain}
+	\bibliography{references}
+	
+\end{document}

@@ -1,0 +1,498 @@
+\chapter{Introduction to NoSQL and MongoDB}
+
+Bab ini memperkenalkan fondasi konsep yang dibutuhkan untuk bekerja dengan MongoDB dalam konteks ekosistem NoSQL. Dimulai dari penjelasan mengenai apa itu NoSQL, karakteristik utamanya, serta posisi MongoDB sebagai basis data dokumen yang populer, bab ini membantu pembaca memahami alasan teknis dan praktis di balik pemilihan MongoDB. Selanjutnya, bab ini memandu proses instalasi dan persiapan lingkungan, termasuk pemasangan MongoDB Community Edition, pengelolaan service \texttt{mongod}, penggunaan \texttt{mongosh}, serta pemanfaatan MongoDB Compass sebagai antarmuka grafis. Di bagian akhir, pembaca diperkenalkan pada cara melakukan koneksi ke MongoDB melalui \texttt{mongosh}, Compass, dan aplikasi Python menggunakan \texttt{pymongo}, dilengkapi ringkasan dan latihan untuk menguatkan pemahaman konseptual sekaligus keterampilan praktis.
+
+\section{NoSQL dan MongoDB}
+
+\subsection{Apa itu NoSQL}
+
+Istilah NoSQL merujuk pada sekumpulan teknologi basis data yang tidak menggunakan model relasional tradisional sebagai fondasi utama. Alih-alih menyimpan data dalam tabel dengan baris dan kolom yang terstruktur ketat, basis data NoSQL menawarkan pendekatan penyimpanan yang lebih fleksibel, khususnya ketika data bersifat tidak terstruktur atau berubah dengan cepat. Pada awal kemunculannya, NoSQL sering dipahami sebagai “non-SQL”, tetapi perkembangan ekosistemnya memperlihatkan bahwa NoSQL justru dapat berjalan berdampingan dengan SQL ketika dibutuhkan. Oleh sebab itu, interpretasi modern dari NoSQL sering dikaitkan dengan konsep “Not Only SQL”, yaitu filosofi bahwa sebuah sistem dapat memadukan gaya relasional dan non-relasional sesuai keperluan.
+
+Perkembangan dunia digital memicu munculnya arsitektur aplikasi yang harus menangani data dalam jumlah besar, bersifat bervariasi, dan datang dalam kecepatan tinggi. Data dari sensor IoT, log aplikasi, media sosial, layanan streaming, dan perangkat mobile menjadi contoh sumber yang tidak cocok lagi diproses dengan model relasional secara ketat. Dalam konteks inilah NoSQL berkembang sebagai alternatif yang mengedepankan skalabilitas horizontal, fleksibilitas skema, serta performa yang lebih stabil ketika beban distribusi data meningkat.
+
+NoSQL bukan satu teknologi tunggal, melainkan sebuah keluarga yang mencakup basis data berbasis key-value, dokumen, column-family, dan graph. Pada bab ini, fokus pembahasannya adalah pada MongoDB, salah satu basis data dokumen yang paling populer dan digunakan luas di industri.
+
+\subsection{Karakteristik MongoDB}
+
+MongoDB adalah basis data dokumen yang menyimpan informasi dalam bentuk struktur mirip JSON. Format internalnya disebut BSON, yaitu representasi biner yang dirancang agar lebih efisien dan mendukung tipe data tambahan. Pendekatan ini memungkinkan sebuah dokumen menyimpan struktur kompleks seperti objek bersarang, daftar, hingga elemen heterogen dalam satu entitas.
+
+Salah satu karakteristik utama MongoDB adalah fleksibilitas skemanya. Dokumen dalam satu koleksi tidak diharuskan mengikuti struktur yang identik. Perubahan bentuk data dapat dilakukan secara iteratif tanpa melalui proses migrasi yang rumit sebagaimana pada basis data relasional. Fleksibilitas ini sangat membantu pada tahap awal pengembangan produk ketika model data masih sering berubah.
+
+Selain itu, MongoDB mendukung skalabilitas horizontal melalui mekanisme sharding. Fitur ini memungkinkan data dibagi menjadi beberapa bagian dan disimpan pada banyak node, membuatnya mampu melayani permintaan dalam volume besar. Untuk menjaga ketersediaan data, MongoDB menggunakan konsep replica set, di mana beberapa node menyimpan salinan data sehingga sistem tetap beroperasi walaupun salah satu node mengalami kegagalan.
+
+Kemampuan querying MongoDB juga berkembang pesat. Selain perintah pencarian sederhana, MongoDB memiliki Aggregation Pipeline yang berperan seperti sistem pemrosesan data terstruktur. Dengan pipeline tersebut, pengembang dapat melakukan transformasi, pengelompokan, perhitungan, atau analitik dasar langsung di dalam basis data tanpa memindahkan data ke sistem eksternal.
+
+\subsection{Kapan Menggunakan MongoDB}
+
+MongoDB sangat sesuai digunakan ketika aplikasi membutuhkan fleksibilitas data yang tinggi dan perkembangan struktur data yang cepat. Proyek yang bergerak dalam domain konten dinamis, seperti sistem manajemen konten, blog platform, katalog produk, atau aplikasi yang menerima data tidak terprediksi dari pengguna, akan memperoleh manfaat dari skema yang tidak kaku. Aplikasi dengan kebutuhan throughput besar, misalnya sistem log, layanan cloud, aktivitas IoT, dan platform sosial, juga sering memilih MongoDB karena kemampuannya membagi beban kerja ke banyak node.
+
+Lingkungan pengembangan yang menuntut iterasi cepat juga cocok menggunakan MongoDB. Tanpa keharusan membuat migrasi skema secara eksplisit pada setiap perubahan kecil, pengembang dapat fokus pada desain fitur tanpa terhambat rigiditas struktur. Sifat dokumen yang menyerupai objek JSON juga mempermudah integrasi dengan aplikasi modern berbasis JavaScript, Node.js, atau framework web lainnya.
+
+Namun MongoDB tidak selalu tepat untuk semua situasi. Aplikasi yang memerlukan konsistensi transaksi yang ketat dan kompleks—misalnya sistem perbankan, akuntansi, atau pembayaran—umumnya lebih cocok menggunakan sistem basis data relasional. MongoDB tetap menyediakan transaksi ACID, tetapi tidak dirancang untuk menangani beban transaksi antar tabel yang saling bergantung secara intensif.
+
+Dengan memahami kelebihan dan batasan ini, pengembang dapat menentukan apakah MongoDB menjadi pilihan yang paling efektif untuk arsitektur aplikasi yang sedang dirancang.
+
+\section{Instalasi dan Persiapan Lingkungan}
+
+\subsection{Instalasi MongoDB Community Edition}
+
+MongoDB Community Edition menyediakan semua fitur inti yang dibutuhkan untuk pengembangan aplikasi. Instalasi dilakukan melalui repository resmi MongoDB agar versi yang dipasang selalu mutakhir dan kompatibel dengan sistem. Contoh di bawah menggunakan distribusi Ubuntu berbasis Debian, tetapi konsepnya serupa untuk sistem lain.
+
+Pertama-tama, kunci GPG MongoDB perlu ditambahkan agar paket yang didapatkan melalui \texttt{apt} dapat diverifikasi. Setelah itu, repository resmi ditambahkan ke dalam konfigurasi paket. Perintah berikut menunjukkan langkah instalasi secara lengkap.
+
+\begin{lstlisting}[language=bash]
+# Import public GPG key MongoDB
+wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+
+# Tambahkan repository MongoDB
+echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu \
+$(lsb_release -sc)/mongodb-org/7.0 multiverse" \
+| sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Update index paket
+sudo apt update
+
+# Install MongoDB Community Edition
+sudo apt install -y mongodb-org
+\end{lstlisting}
+
+Setelah proses instalasi selesai, paket yang terpasang mencakup \texttt{mongod} (server), \texttt{mongo} atau \texttt{mongosh} (shell), serta beberapa utilitas administrasi. Dengan menginstal melalui repository resmi, pengembang dapat melakukan upgrade versi dengan perintah sistem biasa tanpa konfigurasi tambahan.
+
+\subsection{Menjalankan MongoDB Service}
+
+Setelah terpasang, layanan MongoDB dapat dijalankan melalui \texttt{systemctl}. Layanan ini berjalan di latar belakang dan bertanggung jawab menerima koneksi dari aplikasi atau shell. Berikut contoh menjalankan, menghentikan, dan memeriksa statusnya.
+
+\begin{lstlisting}[language=bash]
+# Menjalankan server MongoDB
+sudo systemctl start mongod
+
+# Memastikan server berjalan otomatis setelah reboot
+sudo systemctl enable mongod
+
+# Melihat status server
+sudo systemctl status mongod
+\end{lstlisting}
+
+Jika layanan berjalan dengan baik, status akan menampilkan indikator \texttt{active (running)}. Log awal yang muncul sering kali memberikan informasi mengenai port default (27017) dan direktori data yang digunakan.
+
+Sebagai pengujian sederhana, Anda dapat mencoba terhubung menggunakan \texttt{mongosh} atau memastikan port 27017 sudah terbuka di sistem.
+
+\begin{lstlisting}[language=bash]
+# Menguji koneksi
+mongosh
+\end{lstlisting}
+
+Jika sambungan berhasil, shell akan langsung masuk ke prompt MongoDB.
+
+\subsection{Instalasi MongoDB Shell (mongosh)}
+
+Pada beberapa distribusi, \texttt{mongosh} tidak terpasang secara otomatis sehingga perlu dipasang secara terpisah. \texttt{mongosh} adalah CLI generasi baru yang menggantikan \texttt{mongo} klasik. Instalasi \texttt{mongosh} dapat dilakukan melalui paket resmi yang disediakan oleh MongoDB.
+
+\begin{lstlisting}[language=bash]
+# Unduh dan install MongoDB Shell terbaru
+sudo apt install -y mongodb-mongosh
+\end{lstlisting}
+
+Sebelum melanjutkan, pastikan versi \texttt{mongosh} telah terpasang dengan benar.
+
+\begin{lstlisting}[language=bash]
+mongosh --version
+\end{lstlisting}
+
+Jika berhasil, shell akan menampilkan versi saat ini dan dapat digunakan untuk berinteraksi langsung dengan server MongoDB.
+
+Contoh penggunaan dasar \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Masuk ke MongoDB Shell
+mongosh
+
+# Output awal (contoh)
+Current Mongosh Log ID: 1234567890abcdef…
+Connecting to:      mongodb://127.0.0.1:27017
+Using MongoDB:      7.0.2
+Using Mongosh:      2.1.0
+\end{lstlisting}
+
+\subsection{Instalasi MongoDB Compass}
+
+MongoDB Compass adalah aplikasi GUI resmi untuk menjelajahi koleksi, menjalankan query, dan memvisualisasikan struktur dokumen. Compass sangat membantu ketika pengguna ingin melihat isi database tanpa menulis perintah shell.
+
+Berikut contoh instalasi menggunakan paket \texttt{.deb} untuk distribusi Ubuntu.
+
+\begin{lstlisting}[language=bash]
+# Unduh MongoDB Compass (versi terbaru)
+wget https://downloads.mongodb.com/compass/mongodb-compass_1.41.3_amd64.deb
+
+# Install paket .deb
+sudo dpkg -i mongodb-compass_1.41.3_amd64.deb
+\end{lstlisting}
+
+Setelah terpasang, aplikasi dapat dijalankan melalui menu desktop atau melalui terminal.
+
+\begin{lstlisting}[language=bash]
+mongodb-compass
+\end{lstlisting}
+
+Ketika dibuka, Compass biasanya langsung menampilkan form koneksi dengan URI default \texttt{mongodb://localhost:27017}. Mengklik tombol \textit{Connect} akan memberikan akses visual ke daftar koleksi dan dokumen.
+
+\subsection{Struktur Direktori dan Konfigurasi Dasar}
+
+Secara bawaan, MongoDB menyimpan data dan log dalam direktori tertentu yang telah ditentukan. Untuk distribusi Linux berbasis Debian atau Ubuntu, lokasi defaultnya adalah sebagai berikut:
+
+\begin{lstlisting}[language=bash]
+# Direktori data
+/var/lib/mongodb/
+
+# Direktori log
+/var/log/mongodb/
+
+# Berkas konfigurasi utama
+/etc/mongod.conf
+\end{lstlisting}
+
+Berkas \texttt{mongod.conf} merupakan pusat konfigurasi yang mengatur port, lokasi penyimpanan data, mekanisme keamanan, dan konfigurasi jaringan. Ketika aplikasi membutuhkan perubahan konfigurasi, pengembang dapat mengedit berkas tersebut dan memulai ulang layanan MongoDB agar perubahan berlaku.
+
+Contoh mengubah port default pada berkas konfigurasi:
+
+\begin{lstlisting}[language=bash]
+# Membuka file konfigurasi
+sudo nano /etc/mongod.conf
+
+# Contoh perubahan (dalam file)
+net:
+  port: 27018
+  bindIp: 127.0.0.1
+\end{lstlisting}
+
+Setelah mengubah konfigurasi, layanan perlu dimulai ulang.
+
+\begin{lstlisting}[language=bash]
+sudo systemctl restart mongod
+\end{lstlisting}
+
+Jika konfigurasi valid, server akan berjalan kembali dengan port baru. Kesalahan konfigurasi umumnya akan tercatat pada log, sehingga pengembang dapat melacaknya melalui berkas di direktori \texttt{/var/log/mongodb/}.
+
+Dengan memahami struktur dasar ini, pengembang memiliki fondasi kuat untuk melakukan administrasi MongoDB secara mandiri dan menangani berbagai kebutuhan konfigurasi yang mungkin muncul selama proses pengembangan.
+
+
+
+\section{Koneksi ke MongoDB}
+
+\subsection{Koneksi Menggunakan mongosh}
+
+Koneksi menggunakan \texttt{mongosh} merupakan cara paling langsung untuk berinteraksi dengan server MongoDB. Shell ini menyediakan lingkungan interaktif di mana pengguna dapat menjalankan perintah CRUD, membuat database, mengevaluasi query, hingga mengontrol konfigurasi yang sederhana. Selama server \texttt{mongod} berjalan pada port standar, perintah berikut cukup untuk masuk ke shell.
+
+\begin{lstlisting}[language=bash]
+# Menghubungkan ke server MongoDB lokal
+mongosh
+\end{lstlisting}
+
+Jika koneksi berhasil, \texttt{mongosh} akan menampilkan informasi mengenai versi server dan URL koneksi. Contoh output:
+
+\begin{lstlisting}[language=bash]
+Current Mongosh Log ID: 67aabc912389ef...
+Connecting to:          mongodb://127.0.0.1:27017/
+Using MongoDB:          7.0.3
+Using Mongosh:          2.1.1
+test>
+\end{lstlisting}
+
+Pada prompt \texttt{test>}, pengguna dapat langsung mengetikkan perintah. Sebagai contoh, membuat database dan koleksi baru:
+
+\begin{lstlisting}[language=bash]
+# Membuat database baru (database aktif otomatis berpindah)
+use toko_online
+
+# Menambahkan dokumen ke dalam koleksi
+db.produk.insertOne({ nama: "Laptop", harga: 15000000 })
+
+# Melihat dokumen
+db.produk.find()
+\end{lstlisting}
+
+Jika server berjalan pada alamat atau port yang berbeda, URI eksplisit dapat diberikan:
+
+\begin{lstlisting}[language=bash]
+# Menghubungkan ke server dengan port khusus
+mongosh "mongodb://localhost:27018"
+\end{lstlisting}
+
+Untuk server yang menggunakan autentikasi, format URI dapat menyertakan username dan password:
+
+\begin{lstlisting}[language=bash]
+mongosh "mongodb://userku:rahasia@localhost:27017/admin"
+\end{lstlisting}
+
+Dengan \texttt{mongosh}, administrator maupun pengembang memiliki akses penuh untuk melakukan eksperimen dan verifikasi perilaku database sebelum mengintegrasikannya dengan aplikasi.
+
+\subsection{Koneksi Melalui MongoDB Compass}
+
+MongoDB Compass menawarkan antarmuka grafis yang memudahkan pengguna melakukan koneksi tanpa perlu menulis perintah shell. Ketika aplikasi pertama kali dibuka, tampilan utama menunjukkan form koneksi dengan field URI. Jika server berjalan secara lokal dan tanpa autentikasi, URI bawaan berikut sudah cukup:
+
+\begin{lstlisting}[language=bash]
+mongodb://localhost:27017/
+\end{lstlisting}
+
+Pengguna dapat menekan tombol \textit{Connect} untuk memulai koneksi. Setelah terkoneksi, Compass akan menampilkan daftar database, koleksi, jumlah dokumen, dan performa query secara visual. Sebagai contoh, membuka koleksi \texttt{produk} akan langsung memperlihatkan dokumen dalam format JSON.
+
+Compass juga mendukung mode \textit{Aggregation}, yaitu sebuah editor visual untuk membuat pipeline secara bertahap. Fitur ini membantu ketika pengguna ingin menguji transformasi data tanpa menuliskan perintah panjang di shell. Setelah pipeline berhasil dijalankan, hasil dapat disimpan atau diekspor sebagai JSON.
+
+Compass mendukung koneksi ke server jarak jauh, server dengan autentikasi SCRAM, cluster Atlas, maupun server dengan sertifikat TLS. Semua konfigurasi dapat dilakukan melalui form visual tanpa memerlukan modifikasi URI secara manual.
+
+\subsection{Koneksi dari Aplikasi Python}
+
+Aplikasi Python dapat terhubung ke MongoDB menggunakan pustaka resmi \texttt{pymongo}. Pustaka ini menyediakan antarmuka pemrograman yang lengkap untuk mengakses database, menjalankan query, hingga mengelola indeks. Sebelum digunakan, \texttt{pymongo} perlu dipasang melalui \texttt{pip}.
+
+\begin{lstlisting}[language=bash]
+# Instalasi library pymongo
+pip install pymongo
+\end{lstlisting}
+
+Berikut contoh kode Python sederhana untuk menghubungkan aplikasi ke database MongoDB lokal.
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+# Membuat koneksi ke server MongoDB di localhost
+client = MongoClient("mongodb://localhost:27017/")
+
+# Memilih database
+db = client["toko_online"]
+
+# Memilih koleksi
+produk = db["produk"]
+
+# Menambahkan dokumen
+insert_result = produk.insert_one({
+    "nama": "Keyboard Mechanical",
+    "harga": 750000,
+    "stok": 20
+})
+
+print("ID dokumen yang ditambahkan:", insert_result.inserted_id)
+
+# Membaca dokumen yang baru saja ditambahkan
+hasil = produk.find_one({ "nama": "Keyboard Mechanical" })
+print("Dokumen ditemukan:", hasil)
+\end{lstlisting}
+
+Contoh di atas menunjukkan cara dasar untuk menambahkan dan mengambil dokumen. Ketika aplikasi dijalankan, jika server MongoDB aktif, output akan menampilkan ObjectId dari dokumen yang baru dibuat dan isi dokumen tersebut. Contoh hasil konsol:
+
+\begin{lstlisting}[language=bash]
+ID dokumen yang ditambahkan: 67aacd1b2f1c9eaaad03f912
+Dokumen ditemukan: {'_id': ObjectId('67aacd1b2f1c9eaaad03f912'),
+                    'nama': 'Keyboard Mechanical',
+                    'harga': 750000,
+                    'stok': 20}
+\end{lstlisting}
+
+URI koneksi dapat diperluas untuk mencakup autentikasi, opsi read preference, hingga penggunaan Replica Set. Contoh URI dengan autentikasi:
+
+\begin{lstlisting}[style=PythonStyle]
+client = MongoClient(
+    "mongodb://userku:rahasia@localhost:27017/?authSource=admin"
+)
+\end{lstlisting}
+
+Dengan integrasi ini, aplikasi Python dapat memanfaatkan seluruh kemampuan MongoDB, termasuk CRUD lengkap, aggregation pipeline, serta manajemen indeks.
+
+\section{Ringkasan}
+
+Bab ini memperkenalkan konsep dasar NoSQL dan menempatkan MongoDB sebagai salah satu teknologi basis data dokumen yang paling fleksibel dan populer saat ini. NoSQL muncul sebagai respons terhadap kebutuhan aplikasi modern yang harus menangani data dalam jumlah besar, dengan struktur yang bervariasi dan sering berubah. Dibandingkan model relasional, NoSQL—khususnya MongoDB—menawarkan fleksibilitas skema, kemampuan untuk menyimpan data tidak terstruktur, serta dukungan skalabilitas horizontal melalui sharding. MongoDB juga menyediakan fitur-fitur penting seperti BSON sebagai format penyimpanan, Aggregation Pipeline untuk analitik dan transformasi data, serta mekanisme replica set untuk menjaga ketersediaan data dalam kondisi produksi.
+
+Selain memahami karakteristik dan tujuan penggunaan MongoDB, bab ini juga memandu Anda dalam melakukan instalasi dan konfigurasi server MongoDB, menjalankan layanan \texttt{mongod}, memasang \texttt{mongosh}, serta menggunakan MongoDB Compass sebagai antarmuka grafis. Anda juga telah mempelajari struktur direktori dan berkas konfigurasi, serta cara melakukan koneksi ke MongoDB menggunakan \texttt{mongosh}, MongoDB Compass, dan aplikasi Python melalui pustaka \texttt{pymongo}. Dengan pemahaman ini, Anda kini memiliki fondasi praktis dan konseptual untuk mulai bekerja dengan MongoDB, baik untuk eksperimen pengembangan, proyek skala kecil, maupun aplikasi yang lebih kompleks dan membutuhkan fleksibilitas tinggi dalam pengelolaan data.
+
+\section{Latihan}
+
+Latihan berikut dirancang agar Anda dapat mempraktikkan langsung seluruh konsep yang telah dipelajari dalam bab ini. Setiap tugas disertai dengan contoh jawaban atau keluaran yang diharapkan.
+
+\begin{enumerate}
+  \item \textbf{Menginstal MongoDB Community Edition.}  
+  Ikuti langkah instalasi yang telah dijelaskan pada bab ini. Setelah instalasi selesai, jalankan perintah untuk memeriksa versi MongoDB yang terpasang.
+
+  \textit{Jawaban contoh:}
+
+  \begin{lstlisting}[language=bash]
+  $ mongod --version
+  db version v7.0.2
+  Build Info: ...
+  \end{lstlisting}
+
+
+  \item \textbf{Menjalankan layanan MongoDB untuk pertama kali.}  
+  Jalankan perintah untuk memulai layanan dan periksa statusnya.
+
+  \textit{Jawaban contoh:}
+
+  \begin{lstlisting}[language=bash]
+  $ sudo systemctl start mongod
+  $ sudo systemctl status mongod
+
+  ● mongod.service - MongoDB Database Server
+     Active: active (running)
+     Docs: https://docs.mongodb.org/manual
+  \end{lstlisting}
+
+
+  \item \textbf{Masuk ke MongoDB Shell (mongosh).}  
+  Sambungkan ke server lokal menggunakan perintah \texttt{mongosh}.
+
+  \textit{Jawaban contoh:}
+
+  \begin{lstlisting}[language=bash]
+  $ mongosh
+  Connecting to: mongodb://127.0.0.1:27017/
+  Using MongoDB: 7.0.3
+  Using Mongosh: 2.1.1
+  test>
+  \end{lstlisting}
+
+
+  \item \textbf{Membuat database dan koleksi pertama.}  
+  Buat database bernama \texttt{toko\_online} dan koleksi \texttt{produk}. Tambahkan satu dokumen menggunakan \texttt{insertOne()}.
+
+  \textit{Jawaban contoh:}
+
+  \begin{lstlisting}[language=bash]
+  test> use toko_online
+  toko_online> db.produk.insertOne({ nama: "Laptop", harga: 15000000 })
+  {
+    acknowledged: true,
+    insertedId: ObjectId("67adb4c9e6b9c9...")
+  }
+
+  toko_online> db.produk.find()
+  [
+    { _id: ObjectId("67adb4c9..."), nama: "Laptop", harga: 15000000 }
+  ]
+  \end{lstlisting}
+
+
+  \item \textbf{Mengubah port MongoDB melalui berkas konfigurasi.}  
+  Ganti port menjadi 27018, restart layanan, lalu sambungkan kembali ke port baru menggunakan \texttt{mongosh}.
+
+  \textit{Jawaban contoh:}
+
+  \begin{lstlisting}[language=bash]
+  # Edit file konfigurasi
+  $ sudo nano /etc/mongod.conf
+
+  # Ubah bagian:
+  net:
+    port: 27018
+    bindIp: 127.0.0.1
+
+  # Restart layanan
+  $ sudo systemctl restart mongod
+
+  # Test koneksi
+  $ mongosh "mongodb://localhost:27018"
+  Connecting to: mongodb://localhost:27018/
+  \end{lstlisting}
+
+
+  \item \textbf{Menginstal dan menjalankan MongoDB Compass.}  
+  Setelah Compass terpasang, lakukan koneksi ke database lokal dan buat sebuah database dan koleksi melalui antarmuka GUI.
+
+  \textit{Jawaban contoh (deskripsi langkah):}  
+  1. Buka aplikasi \texttt{mongodb-compass}.  
+  2. Gunakan URI default:  
+     \texttt{mongodb://localhost:27017/}  
+  3. Klik \textit{Connect}.  
+  4. Klik \textit{Create Database}.  
+  5. Masukkan nama: \texttt{perpustakaan}, koleksi awal: \texttt{buku}.  
+  6. Klik \textit{Insert Document} dan tambahkan:  
+     \{ "judul": "NoSQL Overview", "tahun": 2024 \}.  
+  7. Dokumen akan tampil di panel Compass.
+
+
+  \item \textbf{Koneksi dari Python menggunakan pymongo.}  
+  Buat skrip Python yang menyisipkan satu dokumen produk dan membaca kembali hasilnya.
+
+  \textit{Jawaban contoh (Python, \texttt{style=PythonStyle}):}
+
+  \begin{lstlisting}[style=PythonStyle]
+  from pymongo import MongoClient
+
+  # Koneksi ke server
+  client = MongoClient("mongodb://localhost:27017/")
+
+  # Database dan koleksi
+  db = client["toko_online"]
+  produk = db["produk"]
+
+  # Insert
+  result = produk.insert_one({
+      "nama": "Headset Gaming",
+      "harga": 350000,
+      "stok": 12
+  })
+  print("ID:", result.inserted_id)
+
+  # Read
+  item = produk.find_one({ "nama": "Headset Gaming" })
+  print("Ditemukan:", item)
+  \end{lstlisting}
+
+  \textit{Contoh output:}
+
+  \begin{lstlisting}[language=bash]
+  ID: 67adc2841ff9c94bd203a912
+  Ditemukan: {'_id': ObjectId('67adc2841ff9c94bd203a912'),
+              'nama': 'Headset Gaming',
+              'harga': 350000,
+              'stok': 12}
+  \end{lstlisting}
+
+
+  \item \textbf{Menampilkan daftar database dan koleksi.}  
+  Gunakan \texttt{mongosh} untuk menampilkan seluruh database dan koleksi yang telah Anda buat.
+
+  \textit{Jawaban contoh:}
+
+  \begin{lstlisting}[language=bash]
+  test> show dbs
+  admin        40.0 KiB
+  local        72.0 KiB
+  toko_online  56.0 KiB
+  perpustakaan 48.0 KiB
+
+  toko_online> show collections
+  produk
+  \end{lstlisting}
+
+
+  \item \textbf{Hands-on gabungan: membuat database mini.}  
+  Buat database \texttt{blog\_mini} dengan koleksi \texttt{post}. Tambahkan minimal dua dokumen dengan field: \texttt{judul}, \texttt{konten}, dan \texttt{tag} (array).
+
+  \textit{Jawaban contoh:}
+
+  \begin{lstlisting}[language=bash]
+  test> use blog_mini
+
+  blog_mini> db.post.insertMany([
+    {
+      judul: "Apa itu NoSQL?",
+      konten: "NoSQL adalah keluarga database non-relasional...",
+      tag: ["nosql", "database"]
+    },
+    {
+      judul: "Belajar MongoDB Dasar",
+      konten: "MongoDB menggunakan BSON untuk menyimpan dokumen...",
+      tag: ["mongodb", "dokumen"]
+    }
+  ])
+  \end{lstlisting}
+
+  \textit{Verifikasi:}
+
+  \begin{lstlisting}[language=bash]
+  blog_mini> db.post.find()
+  [
+    { _id: ..., judul: "Apa itu NoSQL?", ... },
+    { _id: ..., judul: "Belajar MongoDB Dasar", ... }
+  ]
+  \end{lstlisting}
+
+\end{enumerate}

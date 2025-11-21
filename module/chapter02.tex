@@ -1,0 +1,1375 @@
+\chapter{CRUD in MongoDB}
+
+Bab ini berfokus pada operasi CRUD (\textit{Create, Read, Update, Delete}) di MongoDB dan bagaimana operasi-operasi tersebut diterapkan dalam praktik sehari-hari, baik melalui \texttt{mongosh} maupun dari aplikasi Python menggunakan \texttt{pymongo}. Dimulai dari cara menambahkan dokumen baru ke dalam koleksi (\textit{Create}), mengambil dan memfilter data dengan berbagai variasi query (\textit{Read}), memodifikasi dokumen yang sudah ada menggunakan beragam operator pembaruan (\textit{Update}), hingga menghapus data secara selektif dan aman (\textit{Delete}), bab ini menyajikan contoh konkret yang konsisten dengan skenario \texttt{toko\_online}. Di bagian berikutnya, pembahasan CRUD dihubungkan dengan konsep data modeling di MongoDB, termasuk perbedaan pemodelan SQL vs NoSQL, pilihan antara embedded dan referenced data, representasi relasi one-to-one, one-to-many, many-to-many, serta prinsip-prinsip desain skema dan denormalisasi yang baik. Dengan demikian, bab ini tidak hanya mengajarkan cara “mengakses” data, tetapi juga bagaimana merancang struktur dokumen yang selaras dengan pola akses tersebut agar aplikasi tetap efisien dan mudah dikembangkan.
+
+\section{MongoDB CRUD Operations}
+
+\subsection{Create}
+
+Operasi \textit{Create} dalam MongoDB bertujuan untuk menambahkan dokumen baru ke dalam sebuah koleksi. MongoDB menggunakan format dokumen berbasis BSON, sehingga data yang dimasukkan dapat memiliki struktur kompleks seperti objek bersarang, daftar, dan tipe data khusus. Perintah \texttt{insertOne} dan \texttt{insertMany} adalah dua metode utama untuk melakukan operasi Create.
+
+Setiap dokumen yang dimasukkan otomatis mendapatkan \texttt{\_id} jika tidak disediakan oleh pengguna. Nilai ini berupa \texttt{ObjectId}, yaitu identifier unik yang dibuat oleh MongoDB dan berfungsi sebagai primary key dalam setiap koleksi.
+
+\subsubsection{Insert One}
+
+Perintah \texttt{insertOne} digunakan untuk menambahkan satu dokumen ke dalam koleksi. Pada \texttt{mongosh}, dokumen ditulis menggunakan sintaks mirip JSON. Jika koleksi belum pernah dibuat sebelumnya, MongoDB akan otomatis membuatnya ketika operasi insert pertama kali dijalankan.
+
+Contoh memasukkan sebuah dokumen produk:
+
+\begin{lstlisting}[language=bash]
+# Masuk ke shell MongoDB
+mongosh
+
+# Memilih atau membuat database
+use toko_online
+
+# Menambahkan satu dokumen ke koleksi 'produk'
+db.produk.insertOne({
+  nama: "Laptop Pro X",
+  harga: 18500000,
+  kategori: "Elektronik",
+  stok: 12
+})
+\end{lstlisting}
+
+Jika berhasil, MongoDB akan mengembalikan output:
+
+\begin{lstlisting}[language=bash]
+{
+  acknowledged: true,
+  insertedId: ObjectId("67abcf3e21391efaa45b9021")
+}
+\end{lstlisting}
+
+Dokumen tersebut kini tersimpan dan dapat dilihat melalui:
+
+\begin{lstlisting}[language=bash]
+db.produk.find()
+\end{lstlisting}
+
+Contoh penggunaan Insert One melalui Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+hasil = produk.insert_one({
+    "nama": "Mouse Wireless",
+    "harga": 250000,
+    "kategori": "Aksesoris",
+    "stok": 50
+})
+
+print("Dokumen berhasil ditambahkan dengan _id:", hasil.inserted_id)
+\end{lstlisting}
+
+Kode Python di atas akan menghasilkan output seperti:
+
+\begin{lstlisting}[language=bash]
+Dokumen berhasil ditambahkan dengan _id: 67abd3e99123ff00ab29d81c
+\end{lstlisting}
+
+\subsubsection{Insert Many}
+
+Perintah \texttt{insertMany} digunakan ketika pengguna ingin menambahkan beberapa dokumen sekaligus. Hal ini lebih efisien dibandingkan memanggil \texttt{insertOne} berkali-kali karena MongoDB mengirim satu batch operasi tunggal ke server.
+
+Contoh memasukkan banyak dokumen menggunakan \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+db.produk.insertMany([
+  { nama: "Power Bank 20000mAh", harga: 350000, kategori: "Aksesoris", stok: 30 },
+  { nama: "Monitor 27 inch", harga: 3200000, kategori: "Elektronik", stok: 8 },
+  { nama: "Headset Gaming", harga: 850000, kategori: "Audio", stok: 20 }
+])
+\end{lstlisting}
+
+Output dari operasi tersebut biasanya berbentuk:
+
+\begin{lstlisting}[language=bash]
+{
+  acknowledged: true,
+  insertedIds: {
+    '0': ObjectId("67abd44d3f1290e1ea99ad21"),
+    '1': ObjectId("67abd44d3f1290e1ea99ad22"),
+    '2': ObjectId("67abd44d3f1290e1ea99ad23")
+  }
+}
+\end{lstlisting}
+
+Untuk melihat seluruh dokumen yang baru ditambahkan:
+
+\begin{lstlisting}[language=bash]
+db.produk.find()
+\end{lstlisting}
+
+Contoh penggunaan Insert Many dalam Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+hasil = produk.insert_many([
+    { "nama": "USB Hub 4 Port", "harga": 120000, "stok": 40 },
+    { "nama": "Webcam HD", "harga": 450000, "stok": 15 },
+    { "nama": "Portable SSD 1TB", "harga": 1450000, "stok": 10 }
+])
+
+print("ID dokumen yang ditambahkan:")
+for _id in hasil.inserted_ids:
+    print("-", _id)
+\end{lstlisting}
+
+Output yang dihasilkan:
+
+\begin{lstlisting}[language=bash]
+ID dokumen yang ditambahkan:
+- 67abd51c7ab45e00cc21a31b
+- 67abd51c7ab45e00cc21a31c
+- 67abd51c7ab45e00cc21a31d
+\end{lstlisting}
+
+Operasi \texttt{insertMany} sangat berguna ketika pengembang ingin melakukan pengisian awal database (seeding), memigrasi data, atau memasukkan dataset dalam jumlah besar sekaligus.
+
+\subsection{Read}
+
+Operasi \textit{Read} merupakan inti dari interaksi aplikasi dengan MongoDB. Melalui operasi ini, pengguna dapat mengambil dokumen dari sebuah koleksi berdasarkan kriteria tertentu. MongoDB menyediakan fungsi pencarian yang fleksibel, mulai dari query sederhana hingga operasi kompleks menggunakan operator logika, komparasi, dan agregasi. Pada bagian ini, fokus utamanya adalah operasi \texttt{find()} serta penerapan projection, sorting, dan pagination.
+
+\subsubsection{Query Dasar}
+
+Query dasar menggunakan metode \texttt{find()} untuk mengambil dokumen yang sesuai dengan kondisi tertentu. Ketika \texttt{find()} dipanggil tanpa argumen, MongoDB akan mengembalikan seluruh dokumen dalam koleksi.
+
+Contoh query dasar menggunakan \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Menampilkan semua dokumen dari koleksi produk
+db.produk.find()
+
+# Menampilkan dokumen dengan kondisi tertentu
+db.produk.find({ kategori: "Elektronik" })
+
+# Mencari produk dengan harga lebih besar dari 1 juta
+db.produk.find({ harga: { $gt: 1000000 } })
+\end{lstlisting}
+
+Contoh serupa menggunakan Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+# Seluruh dokumen
+for p in produk.find():
+    print(p)
+
+# Dokumen kategori Elektronik
+for p in produk.find({"kategori": "Elektronik"}):
+    print(p)
+
+# Harga > 1.000.000
+for p in produk.find({"harga": {"$gt": 1_000_000}}):
+    print(p)
+\end{lstlisting}
+
+\subsubsection{Projection}
+
+Projection digunakan untuk membatasi field yang muncul dalam hasil query. Ini sangat berguna untuk efisiensi, terutama ketika dokumen memiliki banyak atribut atau ketika aplikasi membutuhkan field tertentu saja.
+
+Contoh projection di \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Menampilkan hanya nama dan harga
+db.produk.find(
+  { kategori: "Elektronik" },
+  { nama: 1, harga: 1 }
+)
+
+# Menyembunyikan _id
+db.produk.find(
+  { kategori: "Elektronik" },
+  { _id: 0, nama: 1, harga: 1 }
+)
+\end{lstlisting}
+
+Projection dalam Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+# Menampilkan hanya 'nama' dan 'harga'
+cursor = produk.find(
+    {"kategori": "Elektronik"},
+    {"nama": 1, "harga": 1}
+)
+
+for p in cursor:
+    print(p)
+
+# Menyembunyikan _id
+cursor = produk.find(
+    {"kategori": "Elektronik"},
+    {"_id": 0, "nama": 1, "harga": 1}
+)
+
+for p in cursor:
+    print(p)
+\end{lstlisting}
+
+\subsubsection{Sorting}
+
+Sorting digunakan untuk mengurutkan hasil query berdasarkan satu atau lebih field. MongoDB menggunakan nilai 1 untuk ascending dan -1 untuk descending.
+
+Contoh sorting di \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Mengurutkan berdasarkan harga paling murah
+db.produk.find().sort({ harga: 1 })
+
+# Mengurutkan berdasarkan stok paling besar
+db.produk.find().sort({ stok: -1 })
+\end{lstlisting}
+
+Contoh sorting di Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import ASCENDING, DESCENDING
+
+# Urutkan berdasarkan harga ascending
+for p in produk.find().sort("harga", ASCENDING):
+    print(p)
+
+# Urutkan berdasarkan stok descending
+for p in produk.find().sort("stok", DESCENDING):
+    print(p)
+\end{lstlisting}
+
+\subsubsection{Pagination (skip, limit)}
+
+Pagination dibutuhkan untuk menampilkan data dalam jumlah besar secara bertahap, seperti pada aplikasi web. MongoDB mendukung pagination dengan metode \texttt{skip()} dan \texttt{limit()}.
+
+Contoh di \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Mengambil 5 dokumen pertama
+db.produk.find().limit(5)
+
+# Mengambil dokumen halaman kedua (lewati 5, ambil 5 berikutnya)
+db.produk.find().skip(5).limit(5)
+
+# Kombinasi dengan sorting
+db.produk.find().sort({ harga: 1 }).skip(10).limit(10)
+\end{lstlisting}
+
+Pagination di Python:
+
+\begin{lstlisting}[style=PythonStyle]
+# Halaman pertama: 5 dokumen
+page1 = produk.find().limit(5)
+for p in page1:
+    print(p)
+
+# Halaman kedua: skip 5, ambil 5
+page2 = produk.find().skip(5).limit(5)
+for p in page2:
+    print(p)
+
+# Pagination dengan sorting
+page_sorted = produk.find().sort("harga", 1).skip(2).limit(2)
+for p in page_sorted:
+    print(p)
+\end{lstlisting}
+
+Penggunaan \texttt{limit} dan \texttt{skip} sangat berguna pada antarmuka pengguna seperti dashboard, katalog produk e-commerce, dan daftar postingan blog. Namun, untuk dataset besar, pagination berbasis \texttt{skip()} dapat menjadi mahal, dan MongoDB menawarkan metode alternatif seperti \textit{range-based pagination} menggunakan \texttt{\_id} atau indeks lain yang lebih efisien.
+
+
+\subsection{Update}
+
+Operasi \textit{Update} dalam MongoDB digunakan untuk memodifikasi dokumen yang sudah ada di dalam koleksi. Tidak seperti database relasional yang memperbarui nilai pada baris tertentu, MongoDB bekerja dengan dokumen yang bersifat fleksibel. Pembaruan dapat dilakukan pada satu dokumen atau beberapa dokumen sekaligus, dan MongoDB menyediakan beragam operator yang memungkinkan pembaruan yang granular seperti mengganti nilai, menambah angka, menambah elemen ke array, atau memperbarui bagian dalam dokumen bersarang.
+
+\subsubsection{Update One}
+
+\texttt{updateOne()} digunakan untuk memperbarui satu dokumen pertama yang cocok dengan kondisi yang diberikan. Jika beberapa dokumen memenuhi syarat, hanya dokumen pertama yang ditemukan yang akan diperbarui.
+
+Contoh \texttt{updateOne} menggunakan \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Mengubah harga produk tertentu
+db.produk.updateOne(
+  { nama: "Laptop Pro X" },
+  { $set: { harga: 17900000 } }
+)
+
+# Menambah stok produk
+db.produk.updateOne(
+  { nama: "Laptop Pro X" },
+  { $inc: { stok: 5 } }
+)
+\end{lstlisting}
+
+Hasil operasi biasanya seperti berikut:
+
+\begin{lstlisting}[language=bash]
+{
+  acknowledged: true,
+  matchedCount: 1,
+  modifiedCount: 1
+}
+\end{lstlisting}
+
+Contoh menggunakan Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+# Mengubah harga
+hasil_harga = produk.update_one(
+    {"nama": "Laptop Pro X"},
+    {"$set": {"harga": 17_900_000}}
+)
+
+print("Hasil update harga:")
+print(" matched_count :", hasil_harga.matched_count)
+print(" modified_count:", hasil_harga.modified_count)
+print(" upserted_id   :", hasil_harga.upserted_id)
+
+# Menambah stok
+hasil_stok = produk.update_one(
+    {"nama": "Laptop Pro X"},
+    {"$inc": {"stok": 5}}
+)
+
+print("\nHasil update stok:")
+print(" matched_count :", hasil_stok.matched_count)
+print(" modified_count:", hasil_stok.modified_count)
+print(" upserted_id   :", hasil_stok.upserted_id)
+
+\end{lstlisting}
+
+\subsubsection{Update Many}
+
+Jika diperlukan untuk memperbarui banyak dokumen sekaligus, \texttt{updateMany()} menjadi metode yang tepat. Perintah ini akan mengubah seluruh dokumen yang cocok dengan kondisi tertentu.
+
+Contoh \texttt{updateMany} di \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Memberikan diskon 10% untuk semua produk kategori Elektronik
+db.produk.updateMany(
+  { kategori: "Elektronik" },
+  { $mul: { harga: 0.90 } }
+)
+
+# Menambah field baru 'promo' pada banyak produk
+db.produk.updateMany(
+  { kategori: "Aksesoris" },
+  { $set: { promo: true } }
+)
+\end{lstlisting}
+
+Hasil:
+
+\begin{lstlisting}[language=bash]
+{
+  acknowledged: true,
+  matchedCount: 5,
+  modifiedCount: 5
+}
+\end{lstlisting}
+
+Contoh \texttt{updateMany} di Python:
+
+\begin{lstlisting}[style=PythonStyle]
+# Memberikan diskon 10% untuk kategori Elektronik
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+# Memberikan diskon 10% untuk kategori Elektronik
+hasil_diskon = produk.update_many(
+    {"kategori": "Elektronik"},
+    {"$mul": {"harga": 0.90}}
+)
+
+print("Hasil update diskon (Elektronik):")
+print(" matched_count :", hasil_diskon.matched_count)
+print(" modified_count:", hasil_diskon.modified_count)
+print(" upserted_id   :", hasil_diskon.upserted_id)
+
+# Menambah field promo pada kategori Aksesoris
+hasil_promo = produk.update_many(
+    {"kategori": "Aksesoris"},
+    {"$set": {"promo": True}}
+)
+
+print("\nHasil update promo (Aksesoris):")
+print(" matched_count :", hasil_promo.matched_count)
+print(" modified_count:", hasil_promo.modified_count)
+print(" upserted_id   :", hasil_promo.upserted_id)
+\end{lstlisting}
+
+\subsubsection{Operator Update (\$set, \$inc, \$push, dll.)}
+
+MongoDB menyediakan berbagai operator untuk memperbarui nilai dalam dokumen. Operator-operator ini memungkinkan perubahan yang kaya dan fleksibel tanpa harus mengganti seluruh isi dokumen.
+
+Penjelasan operator penting:
+
+\textbf{\$set}  
+Digunakan untuk mengganti atau menambahkan field tertentu.
+
+\begin{lstlisting}[language=bash]
+db.produk.updateOne(
+  { nama: "Mouse Wireless" },
+  { $set: { harga: 275000, warna: "Hitam" } }
+)
+\end{lstlisting}
+
+\textbf{\$inc}  
+Menambah atau mengurangi nilai numerik.
+
+\begin{lstlisting}[language=bash]
+db.produk.updateOne(
+  { nama: "Portable SSD 1TB" },
+  { $inc: { stok: -2 } }
+)
+\end{lstlisting}
+
+\textbf{\$push}  
+Menambahkan elemen ke array.
+
+\begin{lstlisting}[language=bash]
+db.produk.updateOne(
+  { nama: "Headset Gaming" },
+  { $push: { ulasan: "Suaranya bagus!" } }
+)
+\end{lstlisting}
+
+\textbf{\$addToSet}  
+Mirip \$push tetapi menghindari duplikasi nilai dalam array.
+
+\begin{lstlisting}[language=bash]
+db.produk.updateOne(
+  { nama: "Headset Gaming" },
+  { $addToSet: { tag: "gaming" } }
+)
+\end{lstlisting}
+
+\textbf{\$unset}  
+Menghapus field dari dokumen.
+
+\begin{lstlisting}[language=bash]
+db.produk.updateOne(
+  { nama: "Webcam HD" },
+  { $unset: { promo: "" } }
+)
+\end{lstlisting}
+
+\textbf{\$mul}  
+Mengalikan nilai numerik.
+
+\begin{lstlisting}[language=bash]
+db.produk.updateOne(
+  { nama: "Monitor 27 inch" },
+  { $mul: { harga: 0.95 } }
+)
+\end{lstlisting}
+
+Berikut kode Pythonnya:
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+def print_hasil(header, hasil):
+    print("#", header)
+    print("  matched_count :", hasil.matched_count)
+    print("  modified_count:", hasil.modified_count)
+    print("  upserted_id   :", hasil.upserted_id)
+
+# $set
+hasil = produk.update_one(
+    {"nama": "Mouse Wireless"},
+    {"$set": {"harga": 275000, "warna": "Hitam"}}
+)
+print_hasil("$set", hasil)
+
+# $addToSet
+hasil = produk.update_one(
+    {"nama": "Headset Gaming"},
+    {"$addToSet": {"tag": "gaming"}}
+)
+print_hasil("$addToSet", hasil)
+
+# $unset
+hasil = produk.update_one(
+    {"nama": "Webcam HD"},
+    {"$unset": {"promo": ""}}
+)
+print_hasil("$unset", hasil)
+
+# $mul
+hasil = produk.update_one(
+    {"nama": "Monitor 27 inch"},
+    {"$mul": {"harga": 0.95}}
+)
+print_hasil("$mul", hasil)
+
+\end{lstlisting}
+
+Dengan operator-operator tersebut, MongoDB memungkinkan pembaruan dokumen yang sangat fleksibel tanpa harus menimpa seluruh isi dokumen. Hal ini sangat berguna terutama pada aplikasi yang bekerja dengan dokumen bersarang, daftar multi-elemen, atau data yang terus berubah secara bertahap.
+
+\subsection{Delete}
+
+Operasi \textit{Delete} digunakan untuk menghapus dokumen dari koleksi. MongoDB menyediakan dua metode utama: \texttt{deleteOne()} untuk menghapus satu dokumen pertama yang cocok dengan kriteria tertentu, dan \texttt{deleteMany()} untuk menghapus seluruh dokumen yang memenuhi kondisi. Sama seperti operasi Read dan Update, metode Delete bekerja berdasarkan filter yang diberikan.  
+
+Perlu diperhatikan bahwa penghapusan bersifat permanen, sehingga operasi Delete sebaiknya dilakukan secara hati-hati, terutama ketika filter terlalu umum atau ketika dijalankan pada lingkungan produksi.
+
+\subsubsection{Delete One}
+
+Metode \texttt{deleteOne()} menghapus satu dokumen pertama yang ditemukan berdasarkan kondisi filter. Jika kondisi yang diberikan cocok dengan banyak dokumen, hanya dokumen pertama yang dipilih MongoDB (sesuai urutan internal penyimpanan).
+
+Contoh penggunaan \texttt{deleteOne} di \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Menghapus satu produk berdasarkan nama
+db.produk.deleteOne({ nama: "Mouse Wireless" })
+
+# Menghapus produk dengan stok nol
+db.produk.deleteOne({ stok: 0 })
+\end{lstlisting}
+
+Jika operasi berhasil, hasilnya tampak seperti berikut:
+
+\begin{lstlisting}[language=bash]
+{
+  acknowledged: true,
+  deletedCount: 1
+}
+\end{lstlisting}
+
+Contoh penggunaan \texttt{deleteOne()} dalam Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+# Menghapus produk berdasarkan nama
+hasil = produk.delete_one({"nama": "Mouse Wireless"})
+print("Jumlah dokumen terhapus:", hasil.deleted_count)
+
+# Menghapus sebuah produk dengan stok 0
+hasil2 = produk.delete_one({"stok": 0})
+print("Jumlah dokumen terhapus:", hasil2.deleted_count)
+\end{lstlisting}
+
+Output di terminal:
+
+\begin{lstlisting}[language=bash]
+Jumlah dokumen terhapus: 1
+Jumlah dokumen terhapus: 1
+\end{lstlisting}
+
+\subsubsection{Delete Many}
+
+Jika ingin menghapus lebih dari satu dokumen sekaligus, metode \texttt{deleteMany()} adalah pendekatan yang tepat. Metode ini akan menghapus seluruh dokumen yang memenuhi kriteria filter.
+
+Contoh \texttt{deleteMany} menggunakan \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Menghapus semua produk kategori Aksesoris
+db.produk.deleteMany({ kategori: "Aksesoris" })
+
+# Menghapus semua produk yang stoknya habis
+db.produk.deleteMany({ stok: { $lte: 0 } })
+\end{lstlisting}
+
+Hasil dari operasi pada umumnya:
+
+\begin{lstlisting}[language=bash]
+{
+  acknowledged: true,
+  deletedCount: 3
+}
+\end{lstlisting}
+
+Contoh penggunaan \texttt{deleteMany} melalui Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+# Menghapus seluruh produk dalam kategori Aksesoris
+hasil = produk.delete_many({"kategori": "Aksesoris"})
+print("Total dokumen terhapus:", hasil.deleted_count)
+
+# Menghapus produk dengan stok <= 0
+hasil2 = produk.delete_many({"stok": {"$lte": 0}})
+print("Total dokumen terhapus:", hasil2.deleted_count)
+\end{lstlisting}
+
+Contoh output:
+
+\begin{lstlisting}[language=bash]
+Total dokumen terhapus: 3
+Total dokumen terhapus: 2
+\end{lstlisting}
+
+Penggunaan \texttt{deleteMany()} harus dilakukan dengan penuh kehati-hatian. Filter yang terlalu luas seperti:
+
+\begin{lstlisting}[language=bash]
+db.produk.deleteMany({})
+\end{lstlisting}
+
+akan menghapus seluruh dokumen pada koleksi tersebut. Ini tidak akan menghapus koleksi, tetapi akan mengosongkan seluruh isi koleksi. Untuk operasi yang benar-benar ingin membersihkan koleksi, ada alternatif komando:
+
+\begin{lstlisting}[language=bash]
+db.produk.drop()
+\end{lstlisting}
+
+Namun, \texttt{drop()} tidak hanya menghapus dokumen, tetapi juga struktur koleksinya termasuk indeks.
+
+Dengan memahami \texttt{deleteOne} dan \texttt{deleteMany}, pengembang dapat mengelola siklus hidup data dengan lebih aman dan tepat sesuai kebutuhan aplikasi.
+
+
+
+\section{Data Modeling di MongoDB}
+
+\subsection{Perbedaan Data Modeling SQL vs NoSQL}
+
+Pemodelan data pada MongoDB memiliki filosofi yang berbeda dengan pendekatan relasional tradisional. Sistem basis data relasional seperti MySQL atau PostgreSQL menggunakan tabel yang terstruktur ketat, relasi antar tabel, dan normalisasi sebagai dasar utama untuk menjaga konsistensi data. Sebaliknya, MongoDB menggunakan dokumen BSON yang fleksibel, memungkinkan struktur bersarang dan skema yang dapat berubah dari waktu ke waktu. Perbedaan mendasar ini bukan hanya sekadar bentuk penyimpanan yang berbeda, tetapi juga mempengaruhi cara pengembang berpikir tentang representasi data dan alur kerja aplikasi.
+
+Dalam model relasional, proses normalisasi dilakukan untuk menghindari duplikasi. Setiap entitas biasanya ditempatkan dalam tabel terpisah, kemudian hubungan antar entitas ditautkan melalui foreign key. Hal ini menghasilkan struktur yang konsisten dan aman untuk transaksi berskala tinggi. Misalnya, pada sistem e-commerce relasional, sebuah tabel \texttt{customers} akan menyimpan informasi pengguna, tabel \texttt{orders} akan menyimpan pesanan, dan tabel \texttt{order\_details} menyimpan rincian setiap item dalam pesanan. Setiap perubahan data dilakukan dengan menjaga integritas referensial dan aturan ACID yang ketat.
+
+Berbeda dengan itu, MongoDB mendesain data berdasarkan pola akses aplikasi. Daripada menyimpan data dalam tabel terpisah, data yang sering diakses bersama disatukan ke dalam satu dokumen. Pendekatan ini disebut \textit{denormalisasi terkontrol}. Tujuannya adalah mengurangi kebutuhan untuk melakukan operasi \textit{join}, karena join adalah operasi yang mahal terutama pada skala besar. Sebagai contoh, data pesanan pada MongoDB dapat disimpan dalam satu dokumen utuh, termasuk daftar produk dan jumlahnya. Dengan demikian, ketika aplikasi membutuhkan detail pesanan, seluruh informasi dapat diambil dalam satu query.
+
+Secara praktis, perbedaan utama pemodelan data SQL dan MongoDB dapat dipahami melalui ilustrasi sederhana. Pada sistem relasional, struktur data untuk pesanan biasanya tampak seperti berikut:
+
+\begin{lstlisting}[language=bash]
+TABLE customers:
+  id, name, email
+
+TABLE orders:
+  id, customer_id, order_date
+
+TABLE order_items:
+  id, order_id, product_id, quantity, price
+\end{lstlisting}
+
+Model ini mengutamakan integritas dan efisiensi penyimpanan, tetapi untuk memperoleh satu informasi pesanan lengkap, aplikasi harus melakukan beberapa join. Untuk satu pesanan, query bisa menjadi seperti ini:
+
+\begin{lstlisting}[language=bash]
+SELECT *
+FROM orders
+JOIN customers ON customers.id = orders.customer_id
+JOIN order_items ON order_items.order_id = orders.id
+WHERE orders.id = 123;
+\end{lstlisting}
+
+Sebaliknya, model MongoDB menyimpan data dalam bentuk dokumen tunggal yang sudah mengandung informasi pelanggan dan daftar item. Contohnya:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId("67abfbbf92f1c9eaaad0aa01"),
+  customer: {
+    id: 10,
+    name: "Andi",
+    email: "andi@example.com"
+  },
+  order_date: ISODate("2025-01-15T10:30:00Z"),
+  items: [
+    { product_id: 2001, name: "Keyboard Mechanical", quantity: 1, price: 750000 },
+    { product_id: 3010, name: "Laptop Pro X", quantity: 1, price: 18500000 }
+  ]
+}
+\end{lstlisting}
+
+Perbedaan ini menciptakan perubahan cara berpikir. Pada MongoDB, desain data tidak hanya mempertimbangkan struktur logis entitas, tetapi juga pola penggunaan data oleh aplikasi. Dengan kata lain, model dibangun bukan untuk menjaga normalisasi formal, tetapi untuk meminimalkan jumlah operasi baca yang dibutuhkan oleh alur kerja utama.
+
+Fleksibilitas skema MongoDB juga memungkinkan setiap dokumen memiliki struktur berbeda. Pengembang dapat menambahkan field baru kapan saja tanpa mengubah dokumen lain. Hal ini sangat berbeda dengan SQL, yang mengharuskan perubahan skema tabel melalui migrasi terstruktur. Fleksibilitas tersebut sangat membantu pada fase awal pengembangan aplikasi ketika model data masih sering berubah dan bereksperimen.
+
+Namun, kebebasan ini tidak berarti bahwa skema tidak boleh dirancang dengan hati-hati. Dalam praktiknya, pengembang tetap perlu mempertimbangkan ukuran dokumen, frekuensi pembaruan, serta skenario konsistensi data. Jika bagian tertentu dari dokumen membutuhkan update berkala dan memiliki ukuran besar, pendekatan embedded mungkin tidak ideal. Pada situasi tertentu, penggunaan referensi antar koleksi tetap diperlukan, terutama untuk data yang digunakan secara global atau bersifat reusable.
+
+Pemodelan di MongoDB pada akhirnya lebih dekat dengan desain objek pada aplikasi dibandingkan desain tabel konvensional. Dokumen dapat mencerminkan struktur objek dalam bahasa pemrograman seperti Python, JavaScript, atau Java, sehingga mengurangi kebutuhan adaptasi antara layer aplikasi dan layer data. Perbedaan mendasar inilah yang menjadikan NoSQL, khususnya MongoDB, sangat cocok untuk aplikasi modern yang membutuhkan skalabilitas, fleksibilitas, dan iterasi cepat dalam pengembangan fitur.
+
+\subsection{Embedded vs Referenced Data}
+
+Dalam MongoDB, pemodelan data dapat dilakukan dengan dua pendekatan utama: menyimpan data secara \textit{embedded} (menanamkan dokumen di dalam dokumen lain) atau menggunakan \textit{referenced data} (memisahkan dokumen ke koleksi terpisah dan menghubungkannya melalui referensi). Kedua pendekatan ini tidak memiliki aturan baku seperti \textit{foreign key} pada sistem relasional. Pemilihan pendekatan sangat bergantung pada pola akses aplikasi, ukuran dokumen, serta konsistensi data yang ingin dicapai.
+
+Embedded data digunakan ketika informasi yang terkait erat ingin disimpan dalam satu dokumen yang sama. Ketika sebuah data selalu diakses bersama, model embedded memberikan performa lebih baik karena seluruh informasi dapat diperoleh melalui satu operasi \texttt{find()}. Dokumen juga menjadi lebih mudah dipahami karena mewakili satu entitas lengkap. Misalnya, ketika menyimpan pesanan pelanggan, daftar item pesanan dapat ditempatkan langsung di dalam dokumen \texttt{orders}.
+
+Contoh model embedded:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId("67ac45ff9c1eab0012aa401"),
+  customer_id: 10,
+  order_date: ISODate("2025-01-15T10:30:00Z"),
+  items: [
+    { product_id: 2001, name: "Keyboard Mechanical", quantity: 1, price: 750000 },
+    { product_id: 3010, name: "Headset Gaming", quantity: 2, price: 850000 }
+  ],
+  shipping: {
+    address: "Jl. Mawar No. 12",
+    city: "Tangerang",
+    courier: "JNE"
+  }
+}
+\end{lstlisting}
+
+\noindent Dibuat dengan perintah berikut:
+\begin{lstlisting}[language=bash]
+use toko_online
+
+db.orders.insertOne({
+  _id: ObjectId("67ac45ff9c1eab0012aa401"),
+  customer_id: 10,
+  order_date: ISODate("2025-01-15T10:30:00Z"),
+  items: [
+    {
+      product_id: 2001,
+      name: "Keyboard Mechanical",
+      quantity: 1,
+      price: 750000
+    },
+    {
+      product_id: 3010,
+      name: "Headset Gaming",
+      quantity: 2,
+      price: 850000
+    }
+  ],
+  shipping: {
+    address: "Jl. Mawar No. 12",
+    city: "Tangerang",
+    courier: "JNE"
+  }
+})
+\end{lstlisting}
+
+Dalam contoh tersebut, seluruh detail order—baik produk maupun informasi pengiriman—tersimpan dalam satu dokumen. Ini membuat operasi pembacaan untuk kebutuhan “lihat detail pesanan” menjadi sangat efisien. Tidak diperlukan join atau query tambahan ke koleksi lain. Model seperti ini sangat cocok untuk data bersifat transaksional, riwayat (historical), dan data yang jarang diperbarui setelah dibuat.
+
+Berbeda dengan itu, referenced data digunakan ketika suatu bagian data perlu digunakan ulang oleh banyak dokumen, atau ketika ukuran dokumen dapat membengkak terlalu besar jika data disimpan secara embedded. Dengan menggunakan referensi, masing-masing entitas disimpan dalam koleksi terpisah, dan aplikasi perlu melakukan dua query atau menggunakan teknik seperti \textit{manual populate} untuk menggabungkan data tersebut.
+
+Contoh model referenced:
+
+\begin{lstlisting}[language=bash]
+# Koleksi customers
+{
+  _id: 10,
+  name: "Andi",
+  email: "andi@example.com"
+}
+
+# Koleksi orders
+{
+  _id: ObjectId("67ac467e1a993001ba04f102"),
+  customer_id: 10,
+  order_date: ISODate("2025-01-17T11:00:00Z")
+}
+\end{lstlisting}
+
+\noindent Dibuat dengan:
+\begin{lstlisting}[language=bash]
+# Memilih database
+use toko_online
+
+# Menambahkan customer
+db.customers.insertOne({
+  _id: 10,
+  name: "Andi",
+  email: "andi@example.com"
+})
+
+# Menambahkan order yang mereferensikan customer_id = 10
+db.orders.insertOne({
+  _id: ObjectId("67ac467e1a993001ba04f102"),
+  customer_id: 10,
+  order_date: ISODate("2025-01-17T11:00:00Z")
+})
+\end{lstlisting}
+
+\noindent Berikut query-nya:
+
+\begin{lstlisting}[language=bash]
+# Ambil order berdasarkan _id
+order = db.orders.findOne({
+  _id: ObjectId("67ac467e1a993001ba04f102")
+})
+
+# Ambil customer berdasarkan customer_id dari order
+customer = db.customers.findOne({
+  _id: order.customer_id
+})
+
+# Lihat hasil
+order
+customer
+\end{lstlisting}
+
+\noindent Berikut dalam Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+from bson import ObjectId
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+
+# Ambil order berdasarkan _id
+order = db.orders.find_one({
+    "_id": ObjectId("67ac467e1a993001ba04f102")
+})
+
+# Ambil customer berdasarkan customer_id
+customer = db.customers.find_one({
+    "_id": order["customer_id"]
+})
+
+print("Order :", order)
+print("Customer :", customer)
+\end{lstlisting}
+
+Dalam model ini, aplikasi akan menyimpan \texttt{customer\_id} sebagai sebuah nilai saja. Ketika aplikasi ingin menampilkan detail pelanggan, aplikasi melakukan query terpisah ke koleksi \texttt{customers}. Pendekatan ini lebih mendekati cara kerja basis data relasional, dan lebih cocok ketika data pelanggan digunakan berulang, atau ketika perubahan data pelanggan harus tercermin pada semua dokumen yang mengacu kepadanya.
+
+Perbedaan praktis antara kedua pendekatan tersebut menjadi jelas saat aplikasi membutuhkan pembaruan data. Dalam model embedded, perubahan pada elemen tertentu, seperti alamat dalam struktur `shipping`, cukup dilakukan pada dokumen pesanan itu sendiri. Namun, jika satu pelanggan memiliki banyak pesanan dan alamat harus diubah secara global, model embedded akan membutuhkan pembaruan pada banyak dokumen sekaligus. Sebaliknya, model referenced menangani pembaruan global dengan lebih efisien karena data pelanggan tinggal di satu lokasi saja.
+
+Embedded dan referenced bukanlah dua pilihan yang saling eksklusif. Banyak skenario nyata menggunakan keduanya secara bersamaan. Data yang sifatnya lokal, kecil, dan sering diakses bersama umumnya di-embedded. Data yang bersifat global, sering berubah, atau digunakan oleh banyak entitas lain biasanya direferensikan. MongoDB memungkinkan kedua pendekatan ini dikombinasikan tanpa batasan rigid seperti migrasi skema pada SQL.
+
+Sebagai pendekatan desain, keputusan akhir bergantung pada pola akses. Jika operasi utama adalah membaca data lengkap dalam satu kali query, embedded akan menjadi pilihan yang lebih efisien. Namun, jika tujuan utamanya adalah menjaga data global yang konsisten dan mudah diperbarui, maka referenced lebih tepat. Dengan memahami karakteristik masing-masing pendekatan, pengembang dapat membangun model data yang efisien, fleksibel, dan sesuai kebutuhan aplikasi modern.
+
+\subsection{One-to-One, One-to-Many, Many-to-Many di MongoDB}
+
+Relasi antar data merupakan bagian penting dalam perancangan model pada MongoDB. Walaupun MongoDB bukanlah basis data relasional, konsep hubungan antar entitas tetap ada. Perbedaannya terletak pada bagaimana hubungan tersebut direpresentasikan dalam dokumen dan bukan melalui foreign key atau constraint eksplisit. Pendekatan yang dipilih—apakah menggunakan embedded atau referenced—akan menentukan performa dan cara aplikasi mengakses data. Pemahaman tentang berbagai jenis relasi, seperti one-to-one, one-to-many, dan many-to-many, membantu pengembang memilih struktur dokumen yang sesuai dengan kebutuhan.
+
+Relasi \textit{one-to-one} terjadi ketika satu entitas hanya memiliki satu pasangan entitas lainnya. Pada MongoDB, relasi semacam ini dapat dengan mudah direpresentasikan secara embedded. Penyimpanan embedded sangat masuk akal karena kedua bagian data tersebut selalu bergerak bersama. Contohnya dapat ditemukan pada profil pengguna yang memiliki satu detail alamat atau satu preferensi akun. Menyimpan alamat langsung di dalam dokumen pengguna membuat akses data lebih sederhana dan cepat.
+
+Contoh model one-to-one embedded:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: 101,
+  name: "Andi",
+  email: "andi@example.com",
+  profile: {
+    birth_date: ISODate("1999-03-12"),
+    phone: "08123456789"
+  }
+}
+\end{lstlisting}
+
+Dalam kasus tertentu, one-to-one juga dapat direpresentasikan sebagai referensi, terutama ketika ukuran data terlalu besar untuk ditempatkan dalam satu dokumen. Misalnya, ketika pengguna memiliki berkas foto profil yang besar atau metadata yang tidak selalu diperlukan. Dalam skenario ini, hanya \texttt{profile\_id} yang disimpan pada dokumen pengguna, sementara detail profil ditempatkan pada koleksi lain.
+
+\begin{lstlisting}[language=bash]
+# Koleksi profiles
+{
+  _id: ObjectId("67ad88aa1f1100abcde00123"),
+  birth_date: ISODate("1999-03-12"),
+  phone: "08123456789",
+  photo_url: "https://cdn.example.com/profile/andi.jpg",
+  bio: "Penggemar teknologi dan fotografi."
+}
+
+# Koleksi users
+{
+  _id: 101,
+  name: "Andi",
+  email: "andi@example.com",
+  profile_id: ObjectId("67ad88aa1f1100abcde00123")
+}
+\end{lstlisting}
+
+
+Relasi \textit{one-to-many} adalah pola yang paling umum dalam aplikasi, seperti pelanggan yang memiliki banyak pesanan, atau artikel yang memiliki banyak komentar. MongoDB mendukung dua cara untuk memodelkan relasi ini: embedded list atau reference terhadap koleksi lain. Embedded lebih cocok digunakan ketika jumlah data anak relatif kecil atau tidak berkembang tanpa batas. Misalnya, daftar alamat pengiriman milik pelanggan atau daftar tag yang disematkan pada artikel.
+
+Contoh one-to-many embedded:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: 201,
+  title: "Belajar MongoDB",
+  tags: ["database", "nosql", "mongodb"],
+  comments: [
+    { user: "Dina", text: "Sangat membantu!", date: ISODate("2025-01-11") },
+    { user: "Rafi", text: "Terima kasih!", date: ISODate("2025-01-12") }
+  ]
+}
+\end{lstlisting}
+
+Akan tetapi, ketika jumlah elemen anak dapat tumbuh secara besar atau tidak terprediksi, pendekatan reference lebih aman. Pada kasus seperti produk yang memiliki ribuan ulasan, embedded dapat menyebabkan dokumen membengkak dan mendekati batas ukuran dokumen MongoDB yang maksimum. Dengan menggunakan reference, setiap ulasan berada di koleksi terpisah, dan dokumen utama hanya menyimpan \texttt{product\_id} sebagai penanda.
+
+Contoh one-to-many referenced:
+
+\begin{lstlisting}[language=bash]
+# Koleksi products
+{
+  _id: 3001,
+  name: "Laptop Pro X"
+}
+
+# Koleksi reviews
+{
+  _id: ObjectId("67ac89ff2f1ab00200fa1123"),
+  product_id: 3001,
+  rating: 5,
+  comment: "Luar biasa!"
+}
+
+{
+  _id: ObjectId("67ac89ff2f1ab00200fa1124"),
+  product_id: 3001,
+  rating: 4,
+  comment: "Performa cepat dan stabil."
+}
+\end{lstlisting}
+
+Relasi \textit{many-to-many} muncul ketika dua entitas memiliki hubungan saling terkait secara jamak, seperti siswa dan mata kuliah, atau film dan aktor. Pada MongoDB, many-to-many umumnya diterapkan menggunakan referensi dua arah, karena embedded tidak cocok untuk struktur yang melibatkan pertumbuhan besar di kedua sisi relasi.
+
+Contoh many-to-many referenced:
+
+\begin{lstlisting}[language=bash]
+# Koleksi students
+{
+  _id: 501,
+  name: "Dina",
+  courses: [101, 102]
+}
+
+# Koleksi courses
+{
+  _id: 101,
+  title: "Basis Data Lanjut",
+  students: [501, 502, 503]
+}
+\end{lstlisting}
+
+Dalam model seperti ini, kedua koleksi saling menyimpan referensi ke entitas lain. Aplikasi kemudian menggabungkan data melalui dua query. MongoDB tidak melakukan join secara otomatis seperti SQL, tetapi aplikasi dapat mengelola hubungan tersebut menggunakan pipeline agregasi atau logika pada lapisan aplikasi.
+
+Pendekatan many-to-many juga dapat ditangani dengan koleksi perantara, mirip seperti tabel join pada SQL. Koleksi tersebut menyimpan pasangan hubungan, misalnya \texttt{student\_id} dan \texttt{course\_id}. Pendekatan ini umum digunakan ketika hubungan memiliki atribut tambahan, seperti nilai atau tanggal pendaftaran.
+
+Dengan memahami cara MongoDB menangani one-to-one, one-to-many, dan many-to-many, pengembang dapat mendesain struktur dokumen yang lebih efektif sesuai kebutuhan. Tidak ada satu model yang selalu benar; yang menentukan adalah bagaimana aplikasi mengakses data, seberapa besar data tumbuh, dan seberapa sering perubahan dilakukan pada setiap bagian data. MongoDB memberikan kebebasan untuk memilih model yang paling sesuai tanpa dibatasi rigiditas seperti pada model relasional tradisional.
+
+\subsection{Schema Design Best Practices}
+
+Perancangan skema pada MongoDB tidak mengikuti aturan normalisasi yang ketat sebagaimana pada basis data relasional. Sebaliknya, MongoDB menekankan pentingnya merancang skema berdasarkan pola akses aplikasi. Pendekatan ini disebut sebagai \textit{application-driven schema design}. Dengan demikian, fokus utama dalam desain skema bukanlah sekadar menghindari duplikasi data, melainkan memastikan bahwa operasi baca dan tulis yang umum dilakukan dapat berlangsung secara efisien. Skema yang baik pada MongoDB adalah skema yang mendukung alur kerja aplikasi secara optimal, dan bukan skema yang terutama dirancang untuk memenuhi aturan formal tertentu.
+
+Salah satu prinsip dasar dalam desain skema MongoDB adalah memahami dokumen sebagai representasi langsung dari objek aplikasi atau unit logis dalam domain. Setiap dokumen sebaiknya dapat berdiri sebagai satu kesatuan yang bermakna. Ketika sebuah entitas sering digunakan secara lengkap dan jarang dipisahkan, pendekatan embedded menjadi pilihan yang lebih alami. Sebaliknya, apabila ukuran data dapat tumbuh tak terkendali atau harus dibagi antar banyak entity, reference adalah pilihan yang lebih tepat. Kesalahan umum yang sering terjadi pada pemula adalah menerapkan normalisasi seperti pada SQL, sehingga setiap entitas selalu dipisah, padahal hal tersebut dapat mengakibatkan kebutuhan melakukan query berulang dan mengurangi performa.
+
+Meskipun MongoDB tidak memiliki batas struktur tabel seperti SQL, setiap dokumen tetap memiliki batas ukuran maksimal enam belas megabyte. Oleh karena itu, data yang berpotensi tumbuh besar—misalnya riwayat aktivitas pengguna atau daftar ulasan produk—tidak cocok untuk model embedded secara penuh. Menggabungkan data dalam dokumen besar tidak hanya membebani penyimpanan, tetapi juga memperlambat operasi pembaruan karena MongoDB menulis ulang seluruh dokumen ketika ada perubahan. Dalam kasus seperti itu, memecah data ke koleksi terpisah akan menghindari terjadinya \textit{document bloat} dan memberikan fleksibilitas yang lebih besar.
+
+Contoh masalah yang dapat muncul akibat dokumen yang terlalu besar:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: 9001,
+  name: "Produk Populer",
+  reviews: [
+    { user: "Andi", rating: 5, text: "Bagus!" },
+    { user: "Dina", rating: 4, text: "Oke juga" },
+    ...
+    # ratusan hingga ribuan review lainnya
+  ]
+}
+\end{lstlisting}
+
+Ketika jumlah ulasan mencapai ribuan, ukuran dokumen meningkat drastis dan menyebabkan operasi pembacaan serta penulisan menjadi lebih lambat. Pada sisi yang lain, jika ulasan dipisahkan ke koleksi \texttt{reviews}, setiap ulasan dapat disimpan sebagai dokumen terpisah sehingga ukuran dokumen utama tetap ringan.
+
+Prinsip penting lainnya dalam desain skema adalah menganalisis jenis query yang akan dijalankan. Jika aplikasi sering membutuhkan data gabungan, misalnya detail pesanan beserta item-itemnya, maka desain embedded sangat menguntungkan. Namun, jika aplikasi jarang membaca keseluruhan dokumen tetapi lebih sering mengakses bagian tertentu, misalnya hanya ingin mengetahui jumlah ulasan atau rating rata-rata, maka pemisahan koleksi dapat memberikan performa yang lebih baik karena query dapat dibatasi pada subset data yang relevan saja.
+
+MongoDB juga menyediakan fitur indeks yang mendukung performa pencarian. Ketika merancang skema, pengembang perlu mengidentifikasi field mana yang sering digunakan dalam filter atau pengurutan. Field-field tersebut idealnya diindeks, terutama jika koleksi memiliki ribuan atau jutaan dokumen. Penggunaan indeks yang tepat dapat mempercepat pencarian secara signifikan, tetapi indeks yang berlebihan dapat memperlambat operasi tulis karena setiap perubahan dokumen perlu diperbarui pada struktur indeks.
+
+Contoh koleksi dengan indeks yang efektif:
+
+\begin{lstlisting}[language=bash]
+# Menambahkan indeks pada field kategori
+db.produk.createIndex({ kategori: 1 })
+
+# Indeks komposit untuk pencarian cepat berdasarkan kategori dan harga
+db.produk.createIndex({ kategori: 1, harga: -1 })
+\end{lstlisting}
+
+Selain itu, desain skema pada MongoDB juga harus mempertimbangkan masalah konsistensi dan concurrency. Meskipun MongoDB mendukung transaksi ACID untuk kebutuhan tertentu, performa paling optimal tetap dicapai ketika operasi dapat diselesaikan dalam satu dokumen. Karena itu, jika sebuah bagian data selalu diubah bersamaan, disarankan untuk menyatukannya dalam dokumen yang sama. Dengan demikian, pengembang tidak perlu menggunakan transaksi lintas koleksi yang membutuhkan sifat ACID penuh dan memperlambat proses.
+
+Sebagai contoh, dalam sistem keranjang belanja, setiap perubahan jumlah barang dalam keranjang sebaiknya dilakukan pada satu dokumen keranjang, bukan melalui banyak dokumen terpisah. Hal ini menjaga konsistensi dan menghindari kebutuhan melakukan pembaruan pada banyak lokasi secara serempak.
+
+Dokumen berikut merupakan contoh desain skema yang baik untuk keranjang belanja:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: 7001,
+  user_id: 31,
+  items: [
+    { product_id: 1001, qty: 2, price: 750000 },
+    { product_id: 1002, qty: 1, price: 250000 }
+  ],
+  updated_at: ISODate("2025-01-20T13:25:00Z")
+}
+\end{lstlisting}
+
+Pendekatan ini memungkinkan operasi pembaruan sederhana seperti menambah jumlah barang atau menghapus barang dilakukan hanya pada satu dokumen tanpa perlu mempertahankan konsistensi antar banyak dokumen.
+
+Prinsip terakhir yang penting adalah membuat skema yang mencerminkan kebutuhan riil aplikasi, bukan menetapkan struktur yang terlalu kaku. MongoDB dirancang untuk fleksibilitas, sehingga skema dapat berevolusi mengikuti perubahan fitur aplikasi. Pada tahap awal pengembangan, skema dapat bersifat minimal dan diperluas ketika aplikasi berkembang. Pendekatan ini sangat sesuai dengan metodologi agile, di mana perubahan kebutuhan dan fitur terjadi secara iteratif.
+
+Dengan menerapkan prinsip-prinsip desain skema ini, pengembang dapat membuat model data yang tidak hanya efisien secara teknis, tetapi juga mudah dikelola dan scalable untuk jangka panjang. MongoDB memberikan kebebasan untuk menyeimbangkan antara kinerja, konsistensi, dan fleksibilitas, sehingga desain skema yang tepat akan sangat bergantung pada konteks aplikasi dan pola data yang dominan.
+
+\subsection{Document Structure dan Denormalisasi}
+
+Struktur dokumen dalam MongoDB merupakan salah satu aspek paling mendasar yang membedakan basis data dokumen dari sistem relasional. Dokumen dalam MongoDB menggunakan format BSON, yaitu representasi biner dari JSON yang memungkinkan penyimpanan tipe data kompleks seperti tanggal, bilangan 64-bit, maupun objek bersarang yang tidak memiliki struktur tetap. Karena bentuk data yang fleksibel ini, dokumen dapat mencerminkan entitas dunia nyata secara lebih alami dan dekat dengan struktur objek dalam bahasa pemrograman modern.
+
+Struktur dokumen yang baik adalah struktur yang dapat berdiri sebagai satu unit logis tanpa membutuhkan banyak query tambahan. Dalam banyak kasus, dokumen dirancang agar mencakup semua informasi yang sering diakses bersama. Pendekatan ini berbeda jauh dengan basis data relasional yang mengandalkan normalisasi dan pemisahan tabel. Pada MongoDB, praktik umum yang dianut adalah \textbf{denormalisasi terkontrol}, yaitu memasukkan data yang terkait langsung dan sering digunakan bersama ke dalam dokumen induk.
+
+Contoh sederhana struktur dokumen yang menggambarkan sebuah artikel blog lengkap dengan penulis dan daftar komentar:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId("67acddc91eaa09001f441122"),
+  title: "Memahami MongoDB untuk Pengembangan Modern",
+  body: "MongoDB adalah basis data NoSQL berbasis dokumen...",
+  author: {
+    id: 501,
+    name: "Dina",
+    email: "dina@example.com"
+  },
+  tags: ["database", "nosql", "mongodb"],
+  comments: [
+    {
+      user: "Andi",
+      text: "Penjelasannya sangat jelas!",
+      date: ISODate("2025-01-10")
+    },
+    {
+      user: "Rafi",
+      text: "Membantu sekali, terima kasih!",
+      date: ISODate("2025-01-12")
+    }
+  ],
+  created_at: ISODate("2025-01-09")
+}
+\end{lstlisting}
+
+Dalam struktur seperti ini, seluruh informasi yang dibutuhkan untuk menampilkan artikel secara lengkap tersedia dalam satu dokumen. Ketika pengguna membuka artikel tersebut, aplikasi tidak perlu melakukan query tambahan untuk menampilkan komentar atau informasi penulis. Segmentasi seperti inilah yang menjadi kekuatan utama MongoDB dalam performa baca, karena satu dokumen dapat diproses dalam satu operasi.
+
+Konsep denormalisasi yang digunakan di sini bukanlah sekadar menggandakan data tanpa aturan, tetapi mempertimbangkan pola akses dan kebutuhan aplikasi. Bila sebuah entitas sekunder seperti komentar atau metadata penulis selalu digunakan bersamaan dengan dokumen utama, menempatkannya dalam satu dokumen memberikan dampak positif terhadap performa. Pendekatan ini juga menghindari kebutuhan untuk melakukan join, yang tidak secara native didukung oleh MongoDB dan dapat menjadi mahal secara performa bila dilakukan melalui pipeline agregasi.
+
+Namun, denormalisasi tidak selalu menjadi pilihan yang tepat. Pada kasus di mana data sekunder sering berubah atau digunakan oleh banyak dokumen lainnya, pemisahan ke koleksi lain tetap merupakan pendekatan yang lebih baik. Misalnya, informasi penulis dalam contoh sebelumnya dapat dipisahkan apabila seorang penulis memiliki ratusan artikel dan data profilnya sering berubah. Dengan menjadikannya sebuah koleksi tersendiri, pembaruan dapat dilakukan di satu lokasi tanpa memodifikasi puluhan atau ratusan dokumen artikel.
+
+Penerapan denormalisasi membutuhkan keseimbangan antara efisiensi baca dan biaya pembaruan. Jika sebuah dokumen mengandung struktur array besar yang terus bertambah, ukuran dokumen dapat berkembang mendekati batas maksimum. Dokumen besar juga membutuhkan biaya tulis yang lebih tinggi karena MongoDB harus menulis ulang seluruh dokumen ketika bagian mana pun diubah. Oleh karena itu, data yang tumbuh tanpa batas seperti catatan log, histori transaksi, atau daftar aktivitas harian lebih cocok disimpan dalam koleksi terpisah meskipun secara logika masih memiliki hubungan yang erat.
+
+Contoh struktur dokumen dengan potensi masalah denormalisasi yang berlebihan:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: 4001,
+  user_id: 21,
+  activities: [
+    { type: "login", time: ISODate("2025-01-01T09:00:00Z") },
+    { type: "view_page", time: ISODate("2025-01-01T09:01:00Z") },
+    { type: "click", time: ISODate("2025-01-01T09:02:00Z") },
+    ... # ribuan entri lainnya
+  ]
+}
+\end{lstlisting}
+
+Dalam skenario tersebut, aktivitas pengguna dapat dengan cepat mencapai ribuan entri. Menggabungkan semua aktivitas ke dalam satu dokumen menyebabkan dokumen membengkak dan menurunkan performa, terutama saat memperbarui entri aktivitas terbaru. Dengan memisahkan aktivitas ke dalam koleksi lain, aplikasi dapat menangani volume data besar dengan lebih efisien.
+
+Denormalisasi dalam MongoDB juga memiliki keuntungan tambahan, yaitu mempermudah caching, terutama pada arsitektur berbasis microservices. Dokumen lengkap dapat disimpan di cache seperti Redis atau Memcached tanpa memerlukan transformasi tambahan. Keuntungan ini menjadikan MongoDB cocok untuk aplikasi yang menuntut waktu respons sangat cepat dan beban baca yang tinggi.
+
+Struktur dokumen sebaiknya dirancang untuk mencerminkan cara aplikasi menggunakan data tersebut, bukan semata-mata berdasarkan struktur logis entitas. Dengan memahami hubungan antar data, frekuensi akses, dan karakteristik pembaruan, pengembang dapat menentukan kapan harus menggunakan embedded structure dan kapan harus memecah data ke dalam koleksi terpisah. Denormalisasi yang tepat akan menghasilkan struktur dokumen yang efisien, mudah dipahami, dan mendukung performa aplikasi dalam jangka panjang.
+
+
+\section{Ringkasan}
+
+Pada bab ini, Anda telah mempelajari operasi CRUD dasar di MongoDB: \textit{Create}, \textit{Read}, \textit{Update}, dan \textit{Delete}. Operasi Create dilakukan menggunakan \texttt{insertOne()} dan \texttt{insertMany()} untuk menambahkan satu atau banyak dokumen ke dalam koleksi, baik melalui \texttt{mongosh} maupun dari aplikasi Python menggunakan \texttt{pymongo}. Operasi Read menggunakan \texttt{find()} untuk mengambil dokumen, dilengkapi dengan projection agar hanya field tertentu yang dikembalikan, sorting untuk mengurutkan hasil, serta pagination menggunakan \texttt{skip()} dan \texttt{limit()} sehingga data dalam jumlah besar dapat ditampilkan secara bertahap. Operasi Update diperkenalkan melalui \texttt{updateOne()} dan \texttt{updateMany()}, dengan berbagai operator seperti \texttt{\$set}, \texttt{\$inc}, \texttt{\$push}, dan operator lain yang memungkinkan pembaruan sebagian dokumen secara fleksibel tanpa menimpa keseluruhan isi. Terakhir, operasi Delete dijalankan dengan \texttt{deleteOne()} dan \texttt{deleteMany()}, dengan penekanan bahwa penghapusan bersifat permanen dan harus dilakukan dengan filter yang tepat agar tidak menghapus data lebih banyak dari yang diinginkan.
+
+Selain aspek operasional, bab ini juga menghubungkan CRUD dengan konsep pemodelan data di MongoDB. Anda telah melihat bagaimana perbedaan filosofi pemodelan antara SQL dan NoSQL mempengaruhi cara CRUD dijalankan, khususnya melalui penggunaan dokumen BSON yang fleksibel dan praktik \textit{denormalisasi terkontrol}. Pembahasan tentang embedded vs referenced data, relasi one-to-one, one-to-many, dan many-to-many, serta \textit{schema design best practices} menunjukkan bahwa desain skema yang baik harus mengikuti pola akses aplikasi, mempertimbangkan ukuran dokumen, frekuensi pembaruan, dan kebutuhan konsistensi. Dengan memahami hubungan antara operasi CRUD dan desain skema, Anda kini memiliki fondasi yang lebih kuat untuk membangun aplikasi berbasis MongoDB yang tidak hanya berjalan dengan benar, tetapi juga efisien, dapat diskalakan, dan mudah dipelihara.
+
+
+\section{Latihan}
+
+Latihan-latihan berikut dirancang untuk membantu Anda mempraktikkan operasi CRUD dan konsep pemodelan data yang telah dibahas pada bab ini. Setiap latihan sudah disertai dengan contoh jawaban atau solusi yang dapat Anda jadikan referensi.
+
+\begin{enumerate}
+  \item 
+  Buat sebuah database bernama \texttt{perpustakaan} dan koleksi \texttt{buku}. Tambahkan minimal lima dokumen buku menggunakan \texttt{insertMany()}, dengan field seperti \texttt{judul}, \texttt{penulis}, \texttt{tahun\_terbit}, dan \texttt{kategori}. Verifikasi bahwa semua dokumen tersimpan dengan menjalankan operasi \texttt{find()} tanpa filter, baik melalui \texttt{mongosh} maupun skrip Python sederhana.
+
+  \textit{Jawaban contoh (mongosh):}
+
+  \begin{lstlisting}[language=bash]
+  # Masuk ke MongoDB Shell
+  mongosh
+
+  # Membuat / memilih database 'perpustakaan'
+  use perpustakaan
+
+  # Membuat koleksi 'buku' dan menambahkan 5 dokumen
+  db.buku.insertMany([
+    { judul: "Pemrograman Python Dasar",
+      penulis: "Andi Nugroho",
+      tahun_terbit: 2020,
+      kategori: "Pemrograman" },
+    { judul: "MongoDB untuk Pemula",
+      penulis: "Dina Pratama",
+      tahun_terbit: 2022,
+      kategori: "Basis Data" },
+    { judul: "Algoritma dan Struktur Data",
+      penulis: "Budi Santoso",
+      tahun_terbit: 2018,
+      kategori: "Ilmu Komputer" },
+    { judul: "Jaringan Komputer",
+      penulis: "Rudi Hartono",
+      tahun_terbit: 2019,
+      kategori: "Jaringan" },
+    { judul: "Sistem Operasi",
+      penulis: "Sari Oktaviani",
+      tahun_terbit: 2021,
+      kategori: "Ilmu Komputer" }
+  ])
+
+  # Verifikasi isi koleksi
+  db.buku.find()
+  \end{lstlisting}
+
+  \textit{Jawaban contoh (Python, dengan \texttt{style=PythonStyle}):}
+
+  \begin{lstlisting}[style=PythonStyle]
+  from pymongo import MongoClient
+
+  client = MongoClient("mongodb://localhost:27017/")
+  db = client["perpustakaan"]
+  buku = db["buku"]
+
+  # Verifikasi dokumen
+  for doc in buku.find():
+      print(doc)
+  \end{lstlisting}
+
+  \item 
+  Lakukan operasi Read pada koleksi \texttt{buku} untuk kasus-kasus berikut:  
+  (a) Menampilkan semua buku dalam kategori tertentu,  
+  (b) Menampilkan hanya \texttt{judul} dan \texttt{penulis} menggunakan projection,  
+  (c) Mengurutkan buku berdasarkan \texttt{tahun\_terbit} dari yang terbaru ke yang paling lama,  
+  (d) Menerapkan pagination untuk menampilkan dua buku per halaman.  
+
+  \textit{Jawaban contoh (mongosh):}
+
+  \begin{lstlisting}[language=bash]
+  # (a) Semua buku dalam kategori 'Ilmu Komputer'
+  db.buku.find({ kategori: "Ilmu Komputer" })
+
+  # (b) Hanya judul dan penulis (menyembunyikan _id)
+  db.buku.find(
+    {},
+    { _id: 0, judul: 1, penulis: 1 }
+  )
+
+  # (c) Urutkan berdasarkan tahun_terbit descending
+  db.buku.find().sort({ tahun_terbit: -1 })
+
+  # (d) Pagination: halaman 1 (2 buku)
+  db.buku.find().sort({ tahun_terbit: -1 }).limit(2)
+
+  # Halaman 2 (skip 2, ambil 2 berikutnya)
+  db.buku.find().sort({ tahun_terbit: -1 }).skip(2).limit(2)
+  \end{lstlisting}
+
+  \textit{Jawaban contoh (Python):}
+
+  \begin{lstlisting}[style=PythonStyle]
+  from pymongo import MongoClient, DESCENDING
+
+  client = MongoClient("mongodb://localhost:27017/")
+  db = client["perpustakaan"]
+  buku = db["buku"]
+
+  # (a) Buku kategori 'Ilmu Komputer'
+  for doc in buku.find({"kategori": "Ilmu Komputer"}):
+      print(doc)
+
+  # (b) Hanya judul dan penulis
+  for doc in buku.find({}, {"_id": 0, "judul": 1, "penulis": 1}):
+      print(doc)
+
+  # (c) Urutkan berdasarkan tahun_terbit descending
+  for doc in buku.find().sort("tahun_terbit", DESCENDING):
+      print(doc)
+
+  # (d) Pagination: 2 buku per halaman
+  halaman_1 = buku.find().sort("tahun_terbit", DESCENDING).limit(2)
+  halaman_2 = buku.find().sort("tahun_terbit", DESCENDING).skip(2).limit(2)
+
+  print("Halaman 1:")
+  for doc in halaman_1:
+      print(doc)
+
+  print("Halaman 2:")
+  for doc in halaman_2:
+      print(doc)
+  \end{lstlisting}
+
+  \item 
+  Rancang dan jalankan beberapa operasi Update pada koleksi \texttt{buku}. Contohnya, ubah \texttt{tahun\_terbit} salah satu buku, tambahkan field baru \texttt{stok} untuk semua buku dengan \texttt{updateMany()}, dan gunakan operator \texttt{\$inc} untuk menambah stok pada beberapa buku tertentu.
+
+  \textit{Jawaban contoh (mongosh):}
+
+  \begin{lstlisting}[language=bash]
+  # Mengubah tahun_terbit salah satu buku
+  db.buku.updateOne(
+    { judul: "Algoritma dan Struktur Data" },
+    { $set: { tahun_terbit: 2023 } }
+  )
+
+  # Menambahkan field stok ke semua buku (default 10)
+  db.buku.updateMany(
+    {},
+    { $set: { stok: 10 } }
+  )
+
+  # Menambah stok 5 untuk buku kategori 'Basis Data'
+  db.buku.updateMany(
+    { kategori: "Basis Data" },
+    { $inc: { stok: 5 } }
+  )
+  \end{lstlisting}
+
+  \textit{Jawaban contoh (Python):}
+
+  \begin{lstlisting}[style=PythonStyle]
+  from pymongo import MongoClient
+
+  client = MongoClient("mongodb://localhost:27017/")
+  db = client["perpustakaan"]
+  buku = db["buku"]
+
+  # Ubah tahun_terbit
+  buku.update_one(
+      {"judul": "Algoritma dan Struktur Data"},
+      {"$set": {"tahun_terbit": 2023}}
+  )
+
+  # Tambahkan field stok ke semua dokumen
+  buku.update_many({}, {"$set": {"stok": 10}})
+
+  # Tambah stok 5 untuk kategori Basis Data
+  buku.update_many(
+      {"kategori": "Basis Data"},
+      {"$inc": {"stok": 5}}
+  )
+  \end{lstlisting}
+
+  \item 
+  Latihan Delete: hapus satu dokumen buku berdasarkan judul menggunakan \texttt{deleteOne()}, lalu hapus beberapa buku berdasarkan kondisi tertentu (misalnya buku dengan \texttt{tahun\_terbit} di bawah tahun tertentu) menggunakan \texttt{deleteMany()}. Jelaskan mengapa filter yang terlalu umum berbahaya.
+
+  \textit{Jawaban contoh (mongosh):}
+
+  \begin{lstlisting}[language=bash]
+  # Menghapus satu buku berdasarkan judul
+  db.buku.deleteOne({ judul: "Jaringan Komputer" })
+
+  # Menghapus semua buku yang terbit sebelum tahun 2020
+  db.buku.deleteMany({ tahun_terbit: { $lt: 2020 } })
+  \end{lstlisting}
+
+  \textit{Penjelasan:}  
+  Filter yang terlalu umum seperti \texttt{db.buku.deleteMany(\{\})} akan menghapus seluruh dokumen dalam koleksi \texttt{buku}. Pada lingkungan produksi, hal ini sangat berbahaya karena dapat menghilangkan semua data tanpa mudah dikembalikan. Oleh karena itu, filter Delete harus dibuat seketat mungkin, dan sebaiknya diuji terlebih dahulu dengan \texttt{find()} sebelum dijalankan.
+
+  \textit{Jawaban contoh (Python):}
+
+  \begin{lstlisting}[style=PythonStyle]
+  from pymongo import MongoClient
+
+  client = MongoClient("mongodb://localhost:27017/")
+  db = client["perpustakaan"]
+  buku = db["buku"]
+
+  # Hapus satu buku berdasarkan judul
+  hasil = buku.delete_one({"judul": "Jaringan Komputer"})
+  print("Terhapus:", hasil.deleted_count)
+
+  # Hapus buku dengan tahun_terbit < 2020
+  hasil2 = buku.delete_many({"tahun_terbit": {"$lt": 2020}})
+  print("Terhapus:", hasil2.deleted_count)
+  \end{lstlisting}
+
+  \item 
+  Buat sebuah model sederhana untuk sistem pemesanan tiket bioskop menggunakan MongoDB. Desainlah struktur dokumen untuk menyimpan data pemesanan yang mencakup informasi pengguna, film, jadwal, dan kursi yang dipesan. Tentukan mana bagian data yang akan di-embedded dan mana yang direferensikan.
+
+  \textit{Jawaban contoh (model dokumen embedded utama + referensi film):}
+
+  Misalnya kita memutuskan bahwa data \texttt{movie} direferensikan dari koleksi lain (karena film dapat dipakai banyak jadwal dan banyak pemesanan), sementara detail kursi dan jadwal di-embedded di dalam dokumen pemesanan.
+
+  \begin{lstlisting}[language=bash]
+  # Koleksi movies
+  {
+    _id: ObjectId("67ad00001aaabbbccdde0001"),
+    title: "Avengers: Endgame",
+    duration_minutes: 180,
+    rating: "PG-13"
+  }
+
+  # Koleksi bookings
+  {
+    _id: ObjectId("67ad11112aaabbbccdde0101"),
+    user: {
+      id: 501,
+      name: "Andi",
+      email: "andi@example.com"
+    },
+    movie_id: ObjectId("67ad00001aaabbbccdde0001"),
+    showtime: {
+      date: ISODate("2025-02-01T19:30:00Z"),
+      theater: "Studio 3",
+      cinema: "XXI Mall ABC"
+    },
+    seats: [
+      { row: "C", number: 5 },
+      { row: "C", number: 6 }
+    ],
+    total_price: 90000,
+    created_at: ISODate("2025-01-25T10:00:00Z")
+  }
+  \end{lstlisting}
+
+  \textit{Operasi Create dan Read utama:}  
+  Create: aplikasi membuat dokumen baru di koleksi \texttt{bookings} dengan informasi pengguna, \texttt{movie\_id}, jadwal, dan kursi.  
+  Read: untuk menampilkan detail pemesanan, aplikasi membaca satu dokumen dari \texttt{bookings} dan, jika perlu, melakukan query tambahan ke koleksi \texttt{movies} untuk mengambil detail film (judul, durasi, rating).
+
+  \item 
+  Analisis kembali koleksi \texttt{buku} yang telah Anda buat. Usulkan minimal dua indeks yang menurut Anda penting untuk meningkatkan performa query (misalnya berdasarkan \texttt{kategori} atau \texttt{tahun\_terbit}). Tulis perintah \texttt{createIndex()} yang diperlukan, lalu jelaskan untuk skenario query apa saja indeks tersebut akan memberikan manfaat paling besar.
+
+  \textit{Jawaban contoh (mongosh):}
+
+  \begin{lstlisting}[language=bash]
+  # Indeks pada field kategori
+  db.buku.createIndex({ kategori: 1 })
+
+  # Indeks komposit pada kategori dan tahun_terbit (descending)
+  db.buku.createIndex({ kategori: 1, tahun_terbit: -1 })
+  \end{lstlisting}
+
+  \textit{Penjelasan:}  
+  Indeks pada \texttt{kategori} akan mempercepat query yang sering mem-filter berdasarkan kategori tertentu, misalnya \texttt{db.buku.find(\{ kategori: "Basis Data" \})}. Indeks komposit pada \texttt{kategori} dan \texttt{tahun\_terbit} akan sangat berguna untuk query yang tidak hanya mem-filter kategori tetapi juga mengurutkan berdasarkan tahun terbit terbaru, misalnya \texttt{db.buku.find(\{ kategori: "Ilmu Komputer" \}).sort(\{ tahun\_terbit: -1 \})}. Tanpa indeks, MongoDB harus melakukan \textit{collection scan} terhadap seluruh dokumen, yang menjadi sangat mahal ketika jumlah data besar.
+
+\end{enumerate}

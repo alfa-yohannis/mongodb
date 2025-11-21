@@ -1,0 +1,1525 @@
+\chapter{Query and Indexing for Performance Optimization}
+
+
+\section{Advanced Querying}
+
+\subsection{Filtering Berdasarkan Operator Logika dan Perbandingan}
+
+Pada tahap dasar, query MongoDB biasanya hanya menggunakan pencocokan langsung seperti \texttt{\{ kategori: "Elektronik" \}}. Namun, dalam aplikasi nyata, kebutuhan pencarian data sering kali jauh lebih kompleks. Untuk itu MongoDB menyediakan berbagai operator perbandingan dan operator logika yang memungkinkan pengguna membuat filter yang lebih kaya dan fleksibel.
+
+Operator perbandingan digunakan ketika kita ingin mengambil dokumen berdasarkan kondisi numerik, tanggal, atau nilai tertentu yang berada dalam rentang. Operator-operator seperti \texttt{\$gt} (greater than), \texttt{\$lt} (less than), \texttt{\$gte}, \texttt{\$lte}, dan \texttt{\$ne} (not equal) sangat umum digunakan dalam skenario seperti filter harga produk, umur pelanggan, atau batas tanggal transaksi. Dengan menggunakan operator ini, pengguna dapat membuat query yang mengekstrak data bernilai tinggi atau rendah berdasarkan kebutuhan dalam aplikasi.
+
+Contoh perbandingan sederhana menggunakan \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Produk dengan harga lebih dari 1 juta
+db.produk.find({ harga: { $gt: 1000000 } })
+
+# Produk dengan stok antara 10 dan 50
+db.produk.find({
+  stok: { $gte: 10, $lte: 50 }
+})
+
+# Produk yang bukan kategori 'Aksesoris'
+db.produk.find({ kategori: { $ne: "Aksesoris" } })
+\end{lstlisting}
+
+Operator logika digunakan untuk menggabungkan beberapa kondisi sekaligus. MongoDB menyediakan operator seperti \texttt{\$and}, \texttt{\$or}, \texttt{\$nor}, dan \texttt{\$not}. Penggunaan operator logika sangat penting ketika filter terdiri dari banyak persyaratan. Misalnya, jika aplikasi ingin menampilkan produk dengan kategori tertentu tetapi dalam kisaran harga tertentu, operator \texttt{\$and} dapat digunakan. Sementara itu, \texttt{\$or} berguna ketika pengguna ingin mengambil dokumen yang memenuhi salah satu dari beberapa kondisi.
+
+Contoh penggunaan operator logika di \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Produk harga > 1 juta DAN kategori Elektronik
+db.produk.find({
+  $and: [
+    { harga: { $gt: 1000000 } },
+    { kategori: "Elektronik" }
+  ]
+})
+
+# Produk kategori 'Elektronik' ATAU 'Komputer'
+db.produk.find({
+  $or: [
+    { kategori: "Elektronik" },
+    { kategori: "Komputer" }
+  ]
+})
+
+# Produk dengan stok bukan antara 1 dan 10
+db.produk.find({
+  stok: { $not: { $gte: 1, $lte: 10 } }
+})
+\end{lstlisting}
+
+Penggunaan operator logika seperti ini memberikan fleksibilitas penuh dalam menyusun kondisi pencarian tanpa harus membangun filter yang rumit secara manual. MongoDB juga memungkinkan operator dapat dikombinasikan dalam satu query. Hal ini sering digunakan pada aplikasi seperti e-commerce, sistem manajemen inventaris, atau dashboard analitik.
+
+Berikut contoh kombinasi operator dalam satu query:
+
+\begin{lstlisting}[language=bash]
+# Produk dengan kategori Elektronik, harga < 5 juta,
+# dan stok antara 5 sampai 100
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 5000000 },
+  $and: [
+    { stok: { $gte: 5 } },
+    { stok: { $lte: 100 } }
+  ]
+})
+\end{lstlisting}
+
+Untuk penggunaan dalam aplikasi Python, semua operator digunakan dengan struktur dictionary yang sama. \texttt{pymongo} tidak memerlukan sintaks khusus selain representasi Python dari dokumen filter.
+
+Contoh query lanjutan menggunakan Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+# Produk harga > 1 juta dan kategori Elektronik
+hasil = produk.find({
+    "$and": [
+        {"harga": {"$gt": 1_000_000}},
+        {"kategori": "Elektronik"}
+    ]
+})
+
+for p in hasil:
+    print(p)
+
+# Produk kategori Elektronik atau Komputer
+hasil2 = produk.find({
+    "$or": [
+        {"kategori": "Elektronik"},
+        {"kategori": "Komputer"}
+    ]
+})
+
+print("Hasil kategori:", list(hasil2))
+
+# Produk dengan stok di luar rentang 1-10
+hasil3 = produk.find({
+    "stok": { "$not": { "$gte": 1, "$lte": 10 } }
+})
+
+print("Stok di luar range:", list(hasil3))
+\end{lstlisting}
+
+Output yang dihasilkan akan menampilkan daftar dokumen yang memenuhi setiap kondisi. Dengan struktur seperti ini, pengembang dapat membuat pencarian kompleks menggunakan kombinasi filter tanpa kesulitan.
+
+Filtering lanjutan ini menjadi dasar dari proses querying yang lebih kompleks seperti agregasi, pemfilteran bertingkat, serta analisis data yang lebih besar. Memahami cara kerja operator perbandingan \& logika ini merupakan langkah awal menuju penggunaan penuh kemampuan MongoDB dalam skenario aplikasi nyata.
+
+\subsection{Query pada Array dan Embedded Documents}
+
+MongoDB menyediakan kemampuan yang kuat untuk melakukan pencarian pada struktur data kompleks seperti array dan embedded documents. Kemampuan ini merupakan salah satu keunggulan utama MongoDB dibandingkan basis data relasional, karena dokumen dapat menyimpan struktur bersarang tanpa batasan rigid. Dengan demikian, query dapat ditujukan tidak hanya pada field tingkat atas, tetapi juga pada elemen di dalam array maupun subdokumen.
+
+Array merupakan struktur umum pada banyak aplikasi modern, misalnya daftar tag pada artikel, daftar alamat pada pengguna, atau daftar item pada pesanan. MongoDB mendukung pencarian langsung di dalam array hanya dengan mencocokkan nilai tertentu. Jika sebuah elemen array memiliki nilai yang sama dengan kondisi yang diberikan, dokumen tersebut dianggap cocok. Sebagai contoh, jika koleksi \texttt{produk} memiliki field \texttt{tags} berbentuk array string, maka pencarian produk berdasarkan satu tag sangat mudah dilakukan.
+
+Contoh dasar query array menggunakan \texttt{mongosh}:
+
+\begin{lstlisting}[language=bash]
+# Mencari produk yang memiliki tag "gaming"
+db.produk.find({ tags: "gaming" })
+
+# Mencari dokumen yang memiliki minimal satu item dengan quantity > 1
+db.orders.find({ "items.qty": { $gt: 1 } })
+\end{lstlisting}
+
+Dalam contoh kedua, field \texttt{items} merupakan array berisi subdokumen, dan MongoDB dapat langsung menelusuri elemen-elemen array tersebut melalui dot notation. Dot notation memungkinkan pengguna menunjuk field di dalam embedded documents tanpa harus menulis struktur dokumen lengkap.
+
+Array juga dapat dicocokkan dengan operator seperti \texttt{\$all}, yang digunakan untuk memastikan bahwa sebuah array mengandung seluruh nilai tertentu. Operator ini berguna ketika aplikasi membutuhkan dokumen yang memenuhi beberapa kriteria array sekaligus.
+
+Contoh penggunaan \texttt{\$all}:
+
+\begin{lstlisting}[language=bash]
+# Produk yang memiliki kedua tag: "elektronik" dan "premium"
+db.produk.find({
+  tags: { $all: ["elektronik", "premium"] }
+})
+\end{lstlisting}
+
+Selain itu, operator \texttt{\$in} dan \texttt{\$nin} juga sering digunakan untuk array. Operator ini mencocokkan nilai terhadap sejumlah kemungkinan nilai dalam bentuk array. Ini sangat efektif pada pencarian filter seperti warna produk, kategori, atau status.
+
+\begin{lstlisting}[language=bash]
+# Produk dengan kategori salah satu dari ["Elektronik", "Audio"]
+db.produk.find({
+  kategori: { $in: ["Elektronik", "Audio"] }
+})
+\end{lstlisting}
+
+Untuk kasus di mana elemen array berupa subdokumen yang lebih kompleks, MongoDB menyediakan operator \texttt{\$elemMatch}. Operator ini digunakan ketika kondisi pencarian harus dipenuhi oleh elemen tunggal dalam array, bukan kombinasi antar elemen dalam array yang berbeda. Hal ini sangat penting dalam kasus-kasus seperti pencarian berdasarkan rentang nilai pada pasangan field di dalam satu elemen array.
+
+Misalnya, jika array \texttt{items} menyimpan elemen seperti:
+
+\begin{lstlisting}[language=bash]
+items: [
+  { product_id: 1001, qty: 2, price: 500000 },
+  { product_id: 1002, qty: 1, price: 1200000 }
+]
+\end{lstlisting}
+
+Pencarian order yang memiliki item dengan \texttt{qty > 1} dan \texttt{price > 600000} harus menggunakan \texttt{\$elemMatch} agar kedua syarat tersebut diperiksa pada satu elemen array yang sama.
+
+\begin{lstlisting}[language=bash]
+db.orders.find({
+  items: {
+    $elemMatch: {
+      qty: { $gt: 1 },
+      price: { $gt: 600000 }
+    }
+  }
+})
+\end{lstlisting}
+
+Jika \texttt{\$elemMatch} tidak digunakan, MongoDB dapat menggabungkan kondisi dari elemen berbeda, sehingga hasilnya tidak akurat.
+
+Embedded documents juga dapat dituju langsung dengan kondisi yang menyesuaikan struktur subdokumen tersebut. Jika sebuah dokumen memiliki struktur:
+
+\begin{lstlisting}[language=bash]
+shipping: {
+  address: "Jl. Melati No. 5",
+  city: "Tangerang",
+  courier: "JNE"
+}
+\end{lstlisting}
+
+Maka pencarian berdasarkan satu atau lebih field dalam embedded document cukup menggunakan dot notation.
+
+\begin{lstlisting}[language=bash]
+# Mencari order yang dikirim ke kota Tangerang
+db.orders.find({ "shipping.city": "Tangerang" })
+
+# Mencari order dengan courier JNE dan alamat tertentu
+db.orders.find({
+  "shipping.courier": "JNE",
+  "shipping.address": { $regex: /Melati/ }
+})
+\end{lstlisting}
+
+Dot notation juga bekerja pada kondisi numerik, boolean, dan tipe data lain. MongoDB menangani pencarian tersebut dengan efisien asalkan indeks yang sesuai telah dibuat.
+
+Penggunaan konsep-konsep ini dalam aplikasi Python menggunakan pustaka \texttt{pymongo} memiliki sintaks yang serupa dalam bentuk dictionary.
+
+Contoh pencarian array dan embedded documents menggunakan Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+
+# Produk dengan tag 'gaming'
+produk_gaming = db.produk.find({ "tags": "gaming" })
+print(list(produk_gaming))
+
+# Order yang punya item qty > 1 dalam satu elemen array
+orders_filtered = db.orders.find({
+    "items": {
+        "$elemMatch": {
+            "qty": {"$gt": 1},
+            "price": {"$gt": 600000}
+        }
+    }
+})
+print(list(orders_filtered))
+
+# Order dengan shipping.city = Tangerang
+tangerang_orders = db.orders.find({
+    "shipping.city": "Tangerang"
+})
+print(list(tangerang_orders))
+\end{lstlisting}
+
+Dengan memahami cara kerja pencarian pada array dan embedded documents, pengembang dapat memanfaatkan kekuatan dokumen BSON secara penuh. Struktur data yang fleksibel ini menjadi dasar dari performa MongoDB yang tinggi, terutama pada aplikasi yang menyimpan data kompleks dan bersarang seperti katalog produk, transaksi e-commerce, ataupun data pengguna berbasis profil dinamis.
+
+\subsection{Aggregation Pipeline}
+
+Aggregation Pipeline adalah fitur kuat dalam MongoDB yang memungkinkan pengguna melakukan transformasi, analisis, dan manipulasi data secara bertahap. Konsep ini mirip dengan alur pemrosesan data pada framework seperti Apache Spark atau teknik \textit{data flow}, di mana setiap tahap (\textit{stage}) menerima input berupa dokumen, memprosesnya, lalu memberikan hasilnya ke tahap berikutnya. Pipeline memungkinkan operasi kompleks seperti filtering, grouping, sorting, reshaping dokumen, perhitungan statistik, hingga lookup antar koleksi, tanpa harus memindahkan data ke aplikasi eksternal.
+
+Setiap \textit{stage} dalam pipeline ditulis sebagai objek yang berada dalam array, dan dieksekusi secara berurutan oleh MongoDB. Pipeline biasanya dimulai dengan penyaringan data, diikuti oleh transformasi, agregasi, dan manipulasi output. Dengan pendekatan ini, beban pemrosesan lebih efisien karena seluruh operasi dijalankan di sisi server.
+
+Contoh struktur dasar pipeline:
+
+\begin{lstlisting}[language=bash]
+db.koleksi.aggregate([
+  { tahap_1 },
+  { tahap_2 },
+  { tahap_3 }
+])
+\end{lstlisting}
+
+\subsubsection{Tahapan Aggregation}
+
+Setiap \textit{stage} dalam Aggregation Pipeline memiliki operator spesifik yang menentukan bagaimana data diproses. Berikut beberapa stage yang paling sering digunakan:
+
+\textbf{1. \texttt{\$match}} – menyaring dokumen  
+Mirip dengan \texttt{find()}, tetapi digunakan di dalam pipeline.
+
+\begin{lstlisting}[language=bash]
+{ $match: { kategori: "Elektronik" } }
+\end{lstlisting}
+
+\textbf{2. \texttt{\$project}} – memilih atau memetakan field  
+Digunakan untuk menampilkan, menyembunyikan, atau membentuk ulang field.
+
+\begin{lstlisting}[language=bash]
+{ $project: { nama: 1, harga: 1, _id: 0 } }
+\end{lstlisting}
+
+\textbf{3. \texttt{\$group} – mengelompokkan data dan melakukan perhitungan}  
+Mirip konsepnya dengan \texttt{GROUP BY} di SQL.
+
+\begin{lstlisting}[language=bash]
+{
+  $group: {
+    _id: "$kategori",
+    total_produk: { $sum: 1 },
+    rata_harga: { $avg: "$harga" }
+  }
+}
+\end{lstlisting}
+
+%\textbf{4. \texttt{\$sort}} – mengurutkan dokumen  
+%Sama seperti metode sort() pada query biasa.
+%
+%\begin{lstlisting}[language=bash]
+%{ $sort: { harga: -1 } }
+%\end{lstlisting}
+%
+%\textbf{5. \texttt{\$limit}} – membatasi jumlah dokumen output  
+%\texttt{\$skip} juga sering digunakan bersama \texttt{\$limit}.
+%
+%\begin{lstlisting}[language=bash]
+%{ $limit: 5 }
+%\end{lstlisting}
+%
+%\textbf{6. \texttt{\$lookup}} – melakukan join antar koleksi  
+%Digunakan untuk menggabungkan dokumen dari koleksi lain.
+%
+%\begin{lstlisting}[language=bash]
+%{
+%  $lookup: {
+%    from: "kategori",
+%    localField: "kategori_id",
+%    foreignField: "_id",
+%    as: "detail_kategori"
+%  }
+%}
+%\end{lstlisting}
+%
+%\textbf{7. \texttt{\$unwind}} – memecah array menjadi beberapa dokumen}  
+%Sangat berguna untuk data yang memiliki array besar.
+
+\begin{lstlisting}[language=bash]
+{ $unwind: "$items" }
+\end{lstlisting}
+
+Dengan mengombinasikan berbagai stage tersebut, pipeline dapat melakukan analitik kompleks secara efisien di sisi server MongoDB.
+
+\subsubsection{Contoh Penggunaan Aggregation}
+
+Bagian ini memberikan beberapa contoh umum penggunaan Aggregation Pipeline untuk analisis data. Misalkan kita memiliki koleksi \texttt{produk} dengan struktur:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId(...),
+  nama: "Keyboard Mechanical",
+  kategori: "Aksesoris",
+  harga: 750000,
+  stok: 20,
+  tags: ["keyboard", "gaming", "mechanical"]
+}
+\end{lstlisting}
+
+\textbf{1. Menghitung total produk per kategori}
+
+\begin{lstlisting}[language=bash]
+db.produk.aggregate([
+  { $group: { _id: "$kategori", total: { $sum: 1 } } }
+])
+\end{lstlisting}
+
+Contoh Python:
+
+\begin{lstlisting}[style=PythonStyle]
+hasil = db.produk.aggregate([
+    {"$group": {"_id": "$kategori", "total": {"$sum": 1}}}
+])
+print(list(hasil))
+\end{lstlisting}
+
+---
+
+\textbf{2. Menghitung rata-rata harga per kategori}
+
+\begin{lstlisting}[language=bash]
+db.produk.aggregate([
+  { $group: { _id: "$kategori", rata_harga: { $avg: "$harga" } } }
+])
+\end{lstlisting}
+
+Python:
+
+\begin{lstlisting}[style=PythonStyle]
+hasil = db.produk.aggregate([
+    {"$group": {"_id": "$kategori", "rata_harga": {"$avg": "$harga"}}}
+])
+print(list(hasil))
+\end{lstlisting}
+
+---
+
+\textbf{3. Menampilkan 5 produk termahal}
+
+\begin{lstlisting}[language=bash]
+db.produk.aggregate([
+  { $sort: { harga: -1 } },
+  { $limit: 5 }
+])
+\end{lstlisting}
+
+Python:
+
+\begin{lstlisting}[style=PythonStyle]
+hasil = db.produk.aggregate([
+    {"$sort": {"harga": -1}},
+    {"$limit": 5}
+])
+print(list(hasil))
+\end{lstlisting}
+
+---
+
+\textbf{4. Menemukan kategori dengan harga rata-rata di atas 1 juta}
+
+\begin{lstlisting}[language=bash]
+db.produk.aggregate([
+  { $group: { _id: "$kategori", rata: { $avg: "$harga" } }},
+  { $match: { rata: { $gt: 1000000 } }}
+])
+\end{lstlisting}
+
+---
+
+\textbf{5. Melakukan join sederhana antara produk dan detail kategori}
+
+Misalkan kita memiliki dua koleksi:
+
+\begin{lstlisting}[language=bash]
+# produk
+{ nama: "Laptop Pro X", kategori_id: 1 }
+
+# kategori
+{ _id: 1, nama: "Elektronik" }
+\end{lstlisting}
+
+Pipeline:
+
+\begin{lstlisting}[language=bash]
+db.produk.aggregate([
+  {
+    $lookup: {
+      from: "kategori",
+      localField: "kategori_id",
+      foreignField: "_id",
+      as: "kategori_detail"
+    }
+  }
+])
+\end{lstlisting}
+
+Python:
+
+\begin{lstlisting}[style=PythonStyle]
+hasil = db.produk.aggregate([
+    {
+        "$lookup": {
+            "from": "kategori",
+            "localField": "kategori_id",
+            "foreignField": "_id",
+            "as": "kategori_detail"
+        }
+    }
+])
+print(list(hasil))
+\end{lstlisting}
+
+---
+
+\textbf{6. Memecah array dan menghitung frekuensi tag}
+
+Jika setiap produk memiliki array \texttt{tags}, kita ingin mengetahui tag mana yang paling sering muncul.
+
+\begin{lstlisting}[language=bash]
+db.produk.aggregate([
+  { $unwind: "$tags" },
+  { $group: { _id: "$tags", jumlah: { $sum: 1 } } },
+  { $sort: { jumlah: -1 } }
+])
+\end{lstlisting}
+
+Python:
+
+\begin{lstlisting}[style=PythonStyle]
+hasil = db.produk.aggregate([
+    {"$unwind": "$tags"},
+    {"$group": {"_id": "$tags", "jumlah": {"$sum": 1}}},
+    {"$sort": {"jumlah": -1}}
+])
+print(list(hasil))
+\end{lstlisting}
+
+Pipeline ini sangat berguna untuk aplikasi seperti e-commerce, blog platform, atau analisis data berdasarkan kategori atau preferensi pengguna.
+
+Aggregation Pipeline memberikan fleksibilitas tinggi untuk melakukan analitik data tanpa harus menulis query SQL kompleks atau menggunakan tools tambahan di luar database. Dengan memahami dasar-dasarnya, pengembang dapat memaksimalkan fitur MongoDB untuk pemrosesan data skala kecil hingga besar.
+
+
+\section{Indexing dan Performance}
+
+\subsection{Membuat Index}
+
+Indeks merupakan salah satu komponen terpenting dalam meningkatkan performa query pada MongoDB. Tanpa indeks, setiap perintah pencarian harus melakukan \textit{collection scan}, yaitu membaca seluruh dokumen dalam koleksi, kemudian mencocokkannya dengan kondisi query. Proses ini berjalan lambat terutama pada koleksi besar dengan ratusan ribu atau jutaan dokumen. Dengan menggunakan indeks pada field yang sering digunakan dalam pencarian, MongoDB dapat langsung melompat ke lokasi data yang relevan, sehingga query berjalan lebih cepat dan efisien.
+
+MongoDB secara otomatis membuat indeks untuk field \texttt{\_id} pada setiap koleksi. Namun, indeks tambahan harus dibuat secara eksplisit oleh pengembang. Indeks dapat dibuat pada field tunggal, beberapa field sekaligus (indeks komposit), indeks untuk array, indeks unik, hingga indeks teks. Pemilihan jenis indeks yang tepat sangat mempengaruhi kinerja aplikasi, terutama pada sistem yang banyak melakukan operasi baca.
+
+Pembuatan indeks dilakukan menggunakan perintah \texttt{createIndex()} pada shell MongoDB. Contoh paling sederhana adalah membuat indeks pada satu field, misalnya \texttt{nama} pada koleksi produk.
+
+\begin{lstlisting}[language=bash]
+# Membuat indeks pada field 'nama'
+db.produk.createIndex({ nama: 1 })
+\end{lstlisting}
+
+Angka \texttt{1} menunjukkan urutan ascending, sementara \texttt{-1} digunakan untuk descending. Dalam kebanyakan kasus, ascending dan descending tidak membedakan performa, tetapi dapat mempengaruhi optimasi sorting.
+
+Contoh indeks descending:
+
+\begin{lstlisting}[language=bash]
+db.produk.createIndex({ harga: -1 })
+\end{lstlisting}
+
+Indeks pada satu field sangat berguna ketika pengguna melakukan pencarian berdasarkan nilai tunggal. Namun, ketika filter terdiri dari beberapa kondisi sekaligus, indeks komposit dapat meningkatkan performa secara signifikan. Indeks komposit menentukan urutan field yang diindeks, sehingga sangat penting bagi pengembang untuk menyesuaikan struktur indeks dengan pola query aplikasi.
+
+Sebagai contoh, aplikasi e-commerce biasanya menampilkan produk berdasarkan kategori dan harga. Pada situasi seperti ini, indeks komposit berikut sangat membantu:
+
+\begin{lstlisting}[language=bash]
+# Indeks komposit pada kategori dan harga
+db.produk.createIndex({ kategori: 1, harga: 1 })
+\end{lstlisting}
+
+Dengan indeks tersebut, query seperti berikut akan berjalan lebih cepat:
+
+\begin{lstlisting}[language=bash]
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 5000000 }
+})
+\end{lstlisting}
+
+MongoDB akan memanfaatkan indeks untuk menemukan seluruh produk dalam kategori tertentu, kemudian menyaring berdasarkan harga.
+
+Selain indeks komposit, MongoDB juga mendukung indeks unik. Indeks jenis ini memastikan tidak ada dua dokumen yang memiliki nilai field yang sama. Indeks unik umum digunakan untuk field seperti email pengguna atau kode produk.
+
+\begin{lstlisting}[language=bash]
+db.users.createIndex({ email: 1 }, { unique: true })
+\end{lstlisting}
+
+Jika dua dokumen dengan email sama dimasukkan, MongoDB akan menolak operasi insert dan memberikan pesan error. Dengan demikian, indeks unik berfungsi sebagai mekanisme integritas data.
+
+Pada struktur dokumen yang memiliki array, MongoDB secara otomatis membuat indeks multikey ketika indeks dibuat pada field array. Indeks multikey memungkinkan MongoDB mengindeks setiap elemen array sehingga pencarian pada elemen-elemen tersebut lebih cepat. Misalnya:
+
+\begin{lstlisting}[language=bash]
+db.produk.createIndex({ tags: 1 })
+\end{lstlisting}
+
+Indeks tersebut mempercepat query seperti:
+
+\begin{lstlisting}[language=bash]
+db.produk.find({ tags: "gaming" })
+\end{lstlisting}
+
+Pembuatan indeks di aplikasi Python menggunakan pustaka \texttt{pymongo} bersifat sangat sederhana. Fungsi yang digunakan adalah \texttt{create\_index()}.
+
+Contoh indeks sederhana menggunakan Python:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+
+# Indeks ascending pada nama produk
+db.produk.create_index({ "nama": 1 })
+\end{lstlisting}
+
+Indeks komposit:
+
+\begin{lstlisting}[style=PythonStyle]
+# Indeks komposit kategori + harga
+db.produk.create_index([
+    ("kategori", 1),
+    ("harga", 1)
+])
+\end{lstlisting}
+
+Indeks unik:
+
+\begin{lstlisting}[style=PythonStyle]
+db.users.create_index(
+    [("email", 1)],
+    unique=True
+)
+\end{lstlisting}
+
+Aplikasi yang membutuhkan performa tinggi harus merancang indeks berdasarkan pola penggunaan data (query patterns), bukan berdasarkan perkiraan semata. Misalnya, tidak perlu membuat indeks pada field yang jarang dipakai untuk pencarian atau sorting, karena setiap indeks memiliki biaya penyimpanan dan memperlambat operasi insert dan update.
+
+Untuk memeriksa indeks yang telah dibuat, MongoDB menyediakan fungsi:
+
+\begin{lstlisting}[language=bash]
+db.produk.getIndexes()
+\end{lstlisting}
+
+Sedangkan untuk menghapus indeks tertentu:
+
+\begin{lstlisting}[language=bash]
+db.produk.dropIndex("nama_1")
+\end{lstlisting}
+
+Pengembang juga dapat menggunakan \texttt{explain()} untuk mengetahui apakah query menggunakan indeks atau tidak. Hal ini sangat berguna untuk debugging performa.
+
+\begin{lstlisting}[language=bash]
+db.produk.find({ kategori: "Elektronik" }).explain()
+\end{lstlisting}
+
+Jika indeks digunakan, bagian \texttt{executionStats} akan menunjukkan \texttt{"indexName": "..."}.
+
+Dengan memahami cara membuat dan mengelola indeks, pengembang dapat memastikan bahwa query berjalan optimal, terutama pada aplikasi berskala besar. Indeks yang tepat akan mengurangi beban server, mempercepat waktu respons, dan meningkatkan pengalaman pengguna secara keseluruhan.
+
+\subsection{Compound Index}
+
+Compound index adalah jenis indeks yang mencakup lebih dari satu field dalam satu struktur indeks. Indeks ini sangat penting untuk mengoptimalkan query yang melibatkan beberapa kondisi sekaligus, seperti kombinasi filter, sorting, atau keduanya. Dalam banyak skenario aplikasi dunia nyata—misalnya e-commerce, sistem blog, atau manajemen data pengguna—query biasanya memfilter berdasarkan beberapa field. Karena itu, compound index memiliki peran penting untuk meningkatkan performa pencarian.
+
+MongoDB memproses compound index berdasarkan urutan field yang ditentukan pada saat indeks dibuat. Urutan tersebut sangat berpengaruh karena menentukan bagaimana MongoDB mengatur dan menavigasi data di dalam struktur indeks. Dengan kata lain, indeks \texttt{\{ kategori: 1, harga: 1 \}} tidak sama dengan indeks \texttt{\{ harga: 1, kategori: 1 \}}. Pemilihan urutan field harus didasarkan pada pola query nyata dalam aplikasi.
+
+Sebagai contoh, anggap kita memiliki koleksi \texttt{produk} dengan ribuan data produk. Aplikasi e-commerce umumnya melakukan pencarian berdasarkan kategori terlebih dahulu, kemudian melakukan penyaringan atau pengurutan berdasarkan harga. Dalam kasus seperti ini, compound index berikut sangat sesuai:
+
+\begin{lstlisting}[language=bash]
+db.produk.createIndex({ kategori: 1, harga: 1 })
+\end{lstlisting}
+
+Indeks ini optimal karena:
+
+1. Query biasanya memfilter kategori terlebih dahulu.  
+2. Setelah kategori diketahui, MongoDB dengan cepat mengurutkan hasil sesuai harga.  
+3. Query sorting berdasarkan \texttt{harga} pada filter \texttt{kategori} juga akan diakselerasi.  
+
+Jika urutan field dibalik seperti:
+
+\begin{lstlisting}[language=bash]
+db.produk.createIndex({ harga: 1, kategori: 1 })
+\end{lstlisting}
+
+Maka indeks menjadi kurang efektif karena aplikasi umumnya tidak memfilter berdasarkan harga terlebih dahulu. MongoDB tidak dapat memanfaatkan bagian kedua indeks jika bagian pertama tidak digunakan dalam filter.
+
+Compound index juga sangat penting dalam operasi sorting. Agar query dapat melakukan sorting dengan indeks, urutan sorting harus konsisten dengan urutan field pada indeks. Contoh query:
+
+\begin{lstlisting}[language=bash]
+db.produk.find({ kategori: "Elektronik" }).sort({ harga: 1 })
+\end{lstlisting}
+
+Query ini akan bekerja cepat jika indeks:
+
+\begin{lstlisting}[language=bash]
+{ kategori: 1, harga: 1 }
+\end{lstlisting}
+
+Karena itu sejalan antara urutan pada filter dan sorting.
+
+Selain itu, compound index dapat terdiri dari lebih dari dua field. Misalnya, dalam skenario pencarian artikel blog berdasarkan penulis, tanggal, dan jumlah views, indeks berikut sangat berguna:
+
+\begin{lstlisting}[language=bash]
+db.artikel.createIndex({
+  penulis: 1,
+  tanggal: -1,
+  views: -1
+})
+\end{lstlisting}
+
+Dengan indeks ini, query berikut dapat berjalan sangat cepat:
+
+\begin{lstlisting}[language=bash]
+db.artikel.find({
+  penulis: "Dina",
+  tanggal: { $gte: ISODate("2025-01-01") }
+}).sort({ tanggal: -1, views: -1 })
+\end{lstlisting}
+
+MongoDB akan menggunakan bagian pertama indeks untuk memfilter penulis, kemudian bagian kedua untuk range tanggal, dan akhirnya mengurutkan berdasarkan views.
+
+Namun, penting untuk memahami bahwa compound index memiliki batasan. Jika query tidak menggunakan prefix dari indeks, MongoDB tidak dapat memanfaatkan seluruh indeks. Prinsip ini dikenal sebagai \textit{prefix rule}. Prefix rule menyatakan bahwa hanya urutan field dari awal indeks yang dapat digunakan.
+
+Contoh indeks:
+
+\begin{lstlisting}[language=bash]
+{ kategori: 1, harga: 1, stok: -1 }
+\end{lstlisting}
+
+Prefix valid yang dapat digunakan:
+
+\begin{lstlisting}[language=bash]
+{ kategori: 1 }
+{ kategori: 1, harga: 1 }
+{ kategori: 1, harga: 1, stok: -1 }
+\end{lstlisting}
+
+Query berikut menggunakan prefix yang valid:
+
+\begin{lstlisting}[language=bash]
+db.produk.find({ kategori: "Audio" })
+db.produk.find({ kategori: "Audio", harga: { $gt: 500000 } })
+\end{lstlisting}
+
+Tetapi query berikut tidak dapat menggunakan indeks:
+
+\begin{lstlisting}[language=bash]
+db.produk.find({ stok: 10 })
+\end{lstlisting}
+
+karena field \texttt{stok} tidak berada pada prefix indeks.
+
+Untuk membuat compound index di Python, digunakan metode \texttt{create\_index()} atau \texttt{create\_indexes()}.
+
+Contoh dengan \texttt{pymongo}:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+
+# Membuat compound index kategori + harga
+db.produk.create_index([
+    ("kategori", 1),
+    ("harga", 1)
+])
+\end{lstlisting}
+
+Contoh lainnya, compound index tiga field:
+
+\begin{lstlisting}[style=PythonStyle]
+db.artikel.create_index([
+    ("penulis", 1),
+    ("tanggal", -1),
+    ("views", -1)
+])
+\end{lstlisting}
+
+MongoDB juga memungkinkan menambahkan opsi tambahan pada compound index, misalnya:
+
+- \texttt{unique: true}  
+- \texttt{partialFilterExpression}  
+- \texttt{sparse: true}  
+
+Contoh indeks unik komposit:
+
+\begin{lstlisting}[language=bash]
+db.users.createIndex(
+  { email: 1, nomor_hp: 1 },
+  { unique: true }
+)
+\end{lstlisting}
+
+Dengan indeks ini, kombinasi email dan nomor HP harus unik.
+
+Untuk memeriksa apakah query memanfaatkan indeks, gunakan \texttt{explain()}:
+
+\begin{lstlisting}[language=bash]
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 3000000 }
+}).sort({ harga: 1 }).explain()
+\end{lstlisting}
+
+Jika indeks digunakan, hasilnya akan mencantumkan:
+
+\begin{lstlisting}[language=bash]
+"indexName": "kategori_1_harga_1"
+\end{lstlisting}
+
+Compound index sangat esensial untuk performa aplikasi nyata, terutama ketika query melibatkan lebih dari satu kondisi. Dengan merancang indeks berdasarkan pola query utama (\_query patterns\_), aplikasi dapat mengurangi waktu pencarian secara signifikan, mengurangi beban CPU, dan meningkatkan respons server terutama pada koleksi berskala besar.
+
+\subsection{Text Search Index}
+
+Text Search Index merupakan fitur khusus MongoDB yang dirancang untuk melakukan pencarian teks secara efisien di dalam dokumen. Berbeda dengan pencarian berbasis \texttt{regex} atau pencarian string biasa yang memerlukan pemindaian seluruh koleksi, text index memungkinkan MongoDB melakukan operasi pencarian berbasis kata, frasa, dan relevansi dengan jauh lebih cepat. Fitur ini sangat berguna untuk aplikasi seperti sistem pencarian artikel, pencarian produk e-commerce, pencarian komentar, atau fitur pencarian konten dalam platform media sosial.
+
+Text index bekerja dengan memecah isi field teks menjadi token kata, melakukan normalisasi seperti menghilangkan stop words (misalnya “dan”, “atau”, “the”), melakukan stemming (kata “belajar”, “belajarlah”, “belajarannya” dianggap sama), dan menyimpannya dalam struktur indeks khusus. Dengan demikian, pencarian tidak hanya melihat substring tetapi memahami konteks kata dalam dokumen.
+
+Untuk membuat text index, MongoDB menggunakan operator \texttt{"text"} pada field yang ingin diindeks. Contoh sederhana pada koleksi artikel:
+
+\begin{lstlisting}[language=bash]
+# Membuat text index pada field 'judul' dan 'konten'
+db.artikel.createIndex({
+  judul: "text",
+  konten: "text"
+})
+\end{lstlisting}
+
+Text index dapat dibuat pada satu atau beberapa field sekaligus. MongoDB akan menggabungkan konten dari semua field tersebut ke dalam satu indeks.
+
+Setelah indeks dibuat, pencarian teks dapat dilakukan menggunakan operator \texttt{\$text} dan \texttt{\$search}. Contoh pencarian sederhana:
+
+\begin{lstlisting}[language=bash]
+# Mencari artikel yang mengandung kata "mongodb"
+db.artikel.find({
+  $text: { $search: "mongodb" }
+})
+\end{lstlisting}
+
+MongoDB juga mendukung pencarian frasa, yaitu pencarian kata yang harus muncul tepat dalam urutan tertentu. Frasa harus ditulis dalam tanda kutip ganda.
+
+\begin{lstlisting}[language=bash]
+db.artikel.find({
+  $text: { $search: "\"basis data dokumen\"" }
+})
+\end{lstlisting}
+
+Pencarian dengan operator minus juga dimungkinkan. Operator ini mengecualikan dokumen yang mengandung kata tertentu. Misalnya:
+
+\begin{lstlisting}[language=bash]
+# Mencari dokumen tentang mongodb tetapi tidak mengandung kata 'SQL'
+db.artikel.find({
+  $text: { $search: "mongodb -SQL" }
+})
+\end{lstlisting}
+
+Salah satu fitur unggulan text index adalah kemampuan untuk memberikan skor relevansi berdasarkan kesesuaian pencarian. MongoDB menghasilkan field \texttt{score} menggunakan \texttt{\$meta: "textScore"} yang dapat digunakan untuk sorting dokumen berdasarkan relevansi.
+
+Contoh mendapatkan skor relevansi:
+
+\begin{lstlisting}[language=bash]
+db.artikel.find(
+  { $text: { $search: "database scalable" } },
+  { score: { $meta: "textScore" } }
+).sort({
+  score: { $meta: "textScore" }
+})
+\end{lstlisting}
+
+Dengan demikian, dokumen yang paling relevan muncul pertama kali.
+
+Penggunaan text index dalam aplikasi Python melalui \texttt{pymongo} sangat sederhana dan mengikuti struktur dictionary yang sama seperti pada shell.
+
+Contoh pembuatan text index:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["blog"]
+
+# Text index pada judul dan konten
+db.artikel.create_index([
+    ("judul", "text"),
+    ("konten", "text")
+])
+\end{lstlisting}
+
+Contoh melakukan pencarian teks:
+
+\begin{lstlisting}[style=PythonStyle]
+hasil = db.artikel.find(
+    { "$text": { "$search": "mongodb" } },
+    { "score": { "$meta": "textScore" } }
+).sort([
+    ("score", { "$meta": "textScore" })
+])
+
+print(list(hasil))
+\end{lstlisting}
+
+Selain text index biasa, MongoDB juga mendukung fitur opsi tambahan seperti:
+
+\textbf{1. Mengatur “weight” pada field tertentu}  
+Field tertentu bisa dianggap lebih penting. Misalnya, judul artikel mempunyai bobot lebih besar dibanding konten.
+
+\begin{lstlisting}[language=bash]
+db.artikel.createIndex(
+  { judul: "text", konten: "text" },
+  { weights: { judul: 5, konten: 1 } }
+)
+\end{lstlisting}
+
+Dengan demikian, dokumen yang memiliki kecocokan pada judul akan mendapatkan skor relevansi lebih tinggi.
+
+\textbf{2. Membatasi text index hanya satu per koleksi}  
+MongoDB hanya mengizinkan satu text index per koleksi. Namun, text index tersebut dapat mencakup beberapa field sekaligus.
+
+\textbf{3. Menggunakan bahasa berbeda}  
+MongoDB mendukung beberapa bahasa untuk proses stemming dan stop words. Misalnya:
+
+\begin{lstlisting}[language=bash]
+db.artikel.createIndex(
+  { konten: "text" },
+  { default_language: "indonesian" }
+)
+\end{lstlisting}
+
+\textbf{4. Override bahasa untuk satu dokumen}  
+Dokumen dapat memiliki field \texttt{language} untuk override bahasa pemrosesan teks.
+
+Contoh:
+
+\begin{lstlisting}[language=bash]
+{
+  judul: "Belajar MongoDB",
+  konten: "Ini adalah artikel contoh.",
+  language: "indonesian"
+}
+\end{lstlisting}
+
+Text search sangat ideal untuk fitur pencarian sederhana hingga menengah pada aplikasi. Namun, untuk kebutuhan pencarian kompleks seperti autocomplete, ranking lanjutan, atau optimasi skala besar, aplikasi profesional sering menggunakan layanan eksternal seperti Elasticsearch atau Atlas Search. Meski demikian, text index bawaan MongoDB sangat cukup untuk kebanyakan aplikasi CRUD skala menengah.
+
+Dengan memahami text index, pengembang dapat menambahkan kemampuan pencarian teks yang cepat, relevan, dan efisien ke dalam aplikasi tanpa infrastruktur tambahan seperti mesin pencarian eksternal.
+
+\subsection{Indexing Best Practices}
+
+Merancang indeks yang efisien pada MongoDB bukan hanya soal menambahkan indeks di setiap field yang sering digunakan dalam query, tetapi memahami pola akses aplikasi secara menyeluruh. Indeks yang tepat dapat meningkatkan performa hingga berkali-kali lipat, sementara indeks yang salah justru dapat memperlambat sistem, menghabiskan memori, atau membebani operasi penulisan. Oleh karena itu, desain indeks harus dilakukan secara strategis dan berdasarkan bukti—bukan asumsi.
+
+Prinsip utama ketika merancang indeks adalah memahami “query patterns”, yaitu pola query yang paling sering dilakukan aplikasi dalam operasi sehari-hari. Query yang jarang digunakan atau tidak kritis biasanya tidak membutuhkan indeks khusus. Sebaliknya, operasi yang sering memfilter, mengurutkan, atau melakukan pencarian berbasis kombinasi beberapa field membutuhkan indeks yang sesuai agar beban CPU tidak meningkat saat jumlah dokumen bertambah.
+
+Salah satu praktik terbaik yang perlu diterapkan adalah mengutamakan selektivitas. Selektivitas mengukur seberapa baik indeks menyaring dokumen. Field dengan banyak nilai unik, seperti email atau kode produk, memiliki selektivitas tinggi dan sangat cocok untuk indeks. Sebaliknya, field yang hanya berisi nilai terbatas seperti “laki-laki/perempuan” atau “aktif/non-aktif” memiliki selektivitas rendah dan indeks pada field tersebut jarang memberikan manfaat performa.
+
+Selain itu, urutan field dalam compound index harus disusun berdasarkan pola filter dan sorting. Field yang paling sering digunakan sebagai filter utama ditempatkan di awal. Dengan demikian, MongoDB dapat memanfaatkan prefix index rule secara efektif. Misalnya pada query:
+
+\begin{lstlisting}[language=bash]
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 2000000 }
+}).sort({ harga: 1 })
+\end{lstlisting}
+
+indeks terbaik yang dapat digunakan adalah:
+
+\begin{lstlisting}[language=bash]
+db.produk.createIndex({ kategori: 1, harga: 1 })
+\end{lstlisting}
+
+Urutan \texttt{kategori → harga} memaksimalkan utilisasi indeks untuk filter dan sorting sekaligus.
+
+Praktik lain yang penting adalah menggunakan indeks secara hemat. Setiap indeks memperlambat operasi \texttt{insert}, \texttt{update}, dan \texttt{delete}, karena MongoDB harus memperbarui struktur indeks setiap kali dokumen berubah. Oleh karena itu, memiliki terlalu banyak indeks dapat menyebabkan bottleneck pada sistem yang memiliki volume tulis tinggi. Evaluasi setiap indeks harus mempertimbangkan dampaknya terhadap workload tulis dan baca.
+
+Menghapus indeks yang tidak digunakan juga merupakan bagian dari manajemen performa yang baik. MongoDB menyediakan fungsi \texttt{db.collection.getIndexes()} untuk melihat indeks aktif. Pengembang dapat meninjau apakah indeks tersebut masih diperlukan sesuai perubahan pola query aplikasi. Indeks lama yang sudah tidak relevan sebaiknya dihapus:
+
+\begin{lstlisting}[language=bash]
+db.produk.dropIndex("kategori_1_harga_1")
+\end{lstlisting}
+
+Pemanfaatan fitur \texttt{explain()} juga merupakan praktik wajib. Dengan menambahkan \texttt{.explain("executionStats")}, pengguna dapat mengetahui apakah query menggunakan indeks, berapa jumlah dokumen yang dipindai, dan berapa banyak dokumen yang cocok. Contoh:
+
+\begin{lstlisting}[language=bash]
+db.orders.find({ "shipping.city": "Tangerang" })
+  .explain("executionStats")
+\end{lstlisting}
+
+Jika MongoDB melakukan \textit{COLLSCAN} (collection scan), artinya tidak ada indeks yang digunakan. Indeks perlu ditambahkan pada field filter:
+
+\begin{lstlisting}[language=bash]
+db.orders.createIndex({ "shipping.city": 1 })
+\end{lstlisting}
+
+Praktik terbaik lainnya adalah menghindari indeks pada field yang sering mengalami perubahan besar atau merupakan array dengan jumlah elemen besar. Indeks multikey memang kuat, tetapi pembaruan array berukuran besar akan lebih mahal karena MongoDB harus memperbarui banyak entry dalam indeks. Dalam kasus seperti ini, memisahkan data ke koleksi lain atau mengurangi ukuran array sering menjadi solusi lebih efisien.
+
+Selain itu, untuk kasus di mana hanya sebagian dokumen yang perlu diindeks, MongoDB menyediakan \texttt{partial index}. Indeks ini bekerja hanya pada dokumen yang memenuhi kondisi tertentu. Contoh, hanya mengindeks produk aktif:
+
+\begin{lstlisting}[language=bash]
+db.produk.createIndex(
+  { nama: 1 },
+  { partialFilterExpression: { status: "aktif" } }
+)
+\end{lstlisting}
+
+Partial index mengurangi ukuran indeks dan mempercepat pencarian untuk subset tertentu, sangat bermanfaat pada dataset sangat besar.
+
+Pengembang juga harus memperhatikan ukuran RAM server. MongoDB menggunakan memori untuk menyimpan bagian penting dari indeks agar pencarian cepat. Jika ukuran indeks jauh lebih besar dari RAM, sistem akan sering melakukan disk I/O yang dapat memperlambat performa. Strategi terbaik adalah menjaga agar ukuran indeks sejalan dengan kapasitas memori, atau melakukan sharding jika dataset tumbuh sangat besar.
+
+Terakhir, indeks harus disesuaikan dengan karakteristik aplikasi. Aplikasi analitik, sistem rekomendasi, dan laporan data membutuhkan indeks yang berbeda dari aplikasi transaksi cepat seperti marketplace atau sistem reservasi. Dengan melakukan monitoring berkala dan menganalisis query yang paling sering dijalankan melalui tools seperti MongoDB Atlas Performance Insights, pengembang dapat mengoptimalkan indeks secara berkelanjutan.
+
+Dengan menerapkan praktik terbaik ini, pengembang dapat memastikan bahwa indeks yang dibuat benar-benar memberikan dampak positif pada performa aplikasi, menjaga efisiensi sistem, dan menghindari overhead yang tidak perlu. Indexing bukan hanya fitur teknis, tetapi strategi desain data yang harus direncanakan matang sesuai kebutuhan aplikasi.
+
+\section{Ringkasan}
+
+Bab ini membahas bagaimana memaksimalkan kemampuan querying MongoDB sekaligus menjaga performa melalui indexing yang tepat. Pada bagian querying, Anda telah melihat bagaimana operator perbandingan (\$gt, \$lt, \$gte, \$lte, \$ne) dan operator logika (\$and, \$or, \$not, \$nor) membentuk fondasi untuk menyusun filter yang kaya dan ekspresif. Di atas itu, MongoDB memungkinkan pencarian pada struktur data kompleks seperti array dan embedded documents menggunakan dot notation, \$in, \$all, dan \$elemMatch sehingga data yang tersimpan dalam bentuk dokumen bersarang tetap mudah diakses. Aggregation Pipeline kemudian memperluas kemampuan ini dengan menyediakan tahapan-tahapan seperti \$match, \$project, \$group, \$sort, \$lookup, dan \$unwind untuk melakukan analitik, transformasi, serta penggabungan data secara bertahap langsung di sisi server.
+
+Bagian indexing menekankan bahwa performa tinggi tidak datang dari query saja, tetapi dari desain indeks yang selaras dengan pola akses aplikasi. Indeks dasar, compound index, dan text index masing-masing memiliki peran: mulai dari mempercepat pencarian sederhana, mengoptimalkan kombinasi filter+sorting, hingga menyediakan kemampuan pencarian teks yang relevan dan terurut berdasarkan skor. Praktik terbaik seperti memilih field dengan selektivitas tinggi, menyusun urutan field dalam compound index sesuai query utama, menggunakan partial index bila perlu, serta rutin menganalisis query dengan explain() membantu menghindari jebakan umum seperti terlalu banyak indeks atau indeks yang tidak pernah dipakai. Dengan memadukan advanced querying dan indexing best practices, pengembang dapat membangun aplikasi berbasis MongoDB yang tidak hanya fungsional, tetapi juga skalabel dan efisien dalam jangka panjang.
+
+\section{Latihan}
+
+\begin{enumerate}
+  \item \textbf{Operator Perbandingan dan Logika Dasar}
+
+    Diberikan koleksi \texttt{produk} dengan struktur dokumen:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId(...),
+  nama: "Keyboard Mechanical",
+  kategori: "Aksesoris",
+  harga: 750000,
+  stok: 20,
+  tags: ["keyboard", "gaming", "mechanical"]
+}
+\end{lstlisting}
+
+    Tuliskan perintah \texttt{find()} di \texttt{mongosh} untuk kasus berikut:
+    \begin{enumerate}
+      \item Menampilkan semua produk dengan \texttt{harga} lebih dari \texttt{2.000.000}.
+      \item Menampilkan produk dengan \texttt{stok} antara 5 dan 50 (inklusif).
+      \item Menampilkan semua produk yang \emph{bukan} kategori \texttt{"Aksesoris"}.
+      \item Menampilkan semua produk dengan kategori \texttt{"Elektronik"} \emph{dan} harga di bawah \texttt{5.000.000}.
+      \item Menampilkan produk dengan kategori \texttt{"Elektronik"} \emph{atau} \texttt{"Komputer"}.
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+# a) Produk dengan harga > 2.000.000
+db.produk.find({
+  harga: { $gt: 2000000 }
+})
+
+# b) Produk dengan stok antara 5 dan 50 (inklusif)
+db.produk.find({
+  stok: { $gte: 5, $lte: 50 }
+})
+
+# c) Produk yang bukan kategori "Aksesoris"
+db.produk.find({
+  kategori: { $ne: "Aksesoris" }
+})
+
+# d) Produk kategori Elektronik dan harga < 5.000.000
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 5000000 }
+})
+
+# e) Produk kategori Elektronik atau Komputer
+db.produk.find({
+  $or: [
+    { kategori: "Elektronik" },
+    { kategori: "Komputer" }
+  ]
+})
+\end{lstlisting}
+
+  \item \textbf{Latihan Operator Logika Terpadu}
+
+    Masih menggunakan koleksi \texttt{produk}, tuliskan query yang memenuhi kondisi berikut:
+    \begin{enumerate}
+      \item Produk kategori \texttt{"Elektronik"}, harga di bawah \texttt{3.000.000}, dan stok minimal \texttt{10}.
+      \item Produk yang memiliki harga di atas \texttt{1.000.000} \emph{atau} stok lebih dari \texttt{100}.
+      \item Produk yang \emph{tidak} berada pada rentang stok 1--10 (gunakan \texttt{\$not} dengan operator perbandingan).
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+# a) Elektronik, harga < 3.000.000, stok >= 10
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 3000000 },
+  stok: { $gte: 10 }
+})
+
+# b) Harga > 1.000.000 atau stok > 100
+db.produk.find({
+  $or: [
+    { harga: { $gt: 1000000 } },
+    { stok: { $gt: 100 } }
+  ]
+})
+
+# c) Stok di luar rentang 1-10
+db.produk.find({
+  stok: { $not: { $gte: 1, $lte: 10 } }
+})
+\end{lstlisting}
+
+  \item \textbf{Query pada Array}
+
+    Asumsikan struktur dokumen \texttt{produk} berikut:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId(...),
+  nama: "Headset Gaming",
+  kategori: "Audio",
+  harga: 850000,
+  tags: ["audio", "gaming", "rgb"]
+}
+\end{lstlisting}
+
+    Buatlah query-query berikut di \texttt{mongosh}:
+    \begin{enumerate}
+      \item Menemukan semua produk yang memiliki tag \texttt{"gaming"}.
+      \item Menemukan produk yang memiliki sekaligus tag \texttt{"elektronik"} dan \texttt{"premium"} (gunakan \texttt{\$all}).
+      \item Menemukan produk dengan kategori salah satu dari \texttt{"Elektronik"} atau \texttt{"Audio"} (gunakan \texttt{\$in}).
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+# a) Produk yang memiliki tag "gaming"
+db.produk.find({
+  tags: "gaming"
+})
+
+# b) Produk yang memiliki tag "elektronik" dan "premium"
+db.produk.find({
+  tags: { $all: ["elektronik", "premium"] }
+})
+
+# c) Produk kategori Elektronik atau Audio
+db.produk.find({
+  kategori: { $in: ["Elektronik", "Audio"] }
+})
+\end{lstlisting}
+
+  \item \textbf{Query pada Array Embedded Documents}
+
+    Diberikan koleksi \texttt{orders} dengan struktur:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId(...),
+  order_no: "ORD-001",
+  items: [
+    { product_id: 1001, qty: 2, price: 500000 },
+    { product_id: 1002, qty: 1, price: 1200000 }
+  ],
+  shipping: {
+    address: "Jl. Melati No. 5",
+    city: "Tangerang",
+    courier: "JNE"
+  }
+}
+\end{lstlisting}
+
+    Tuliskan query untuk:
+    \begin{enumerate}
+      \item Menemukan semua order yang memiliki minimal satu item dengan \texttt{qty > 1}.
+      \item Menemukan order yang memiliki item dengan \texttt{qty > 1} dan \texttt{price > 600000} pada \emph{satu} elemen \texttt{items} yang sama (gunakan \texttt{\$elemMatch}).
+      \item Menemukan semua order yang dikirim ke kota \texttt{"Tangerang"}.
+      \item Menemukan semua order dengan kurir \texttt{"JNE"} dan alamat yang mengandung kata \texttt{"Melati"} (gunakan \texttt{\$regex}).
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+# a) Order dengan minimal satu item qty > 1
+db.orders.find({
+  "items.qty": { $gt: 1 }
+})
+
+# b) Order dengan item qty > 1 dan price > 600000 di elemen yang sama
+db.orders.find({
+  items: {
+    $elemMatch: {
+      qty: { $gt: 1 },
+      price: { $gt: 600000 }
+    }
+  }
+})
+
+# c) Order dengan shipping.city = "Tangerang"
+db.orders.find({
+  "shipping.city": "Tangerang"
+})
+
+# d) Order dengan courier JNE dan address mengandung "Melati"
+db.orders.find({
+  "shipping.courier": "JNE",
+  "shipping.address": { $regex: /Melati/ }
+})
+\end{lstlisting}
+
+  \item \textbf{Latihan Aggregation Pipeline Dasar}
+
+    Masih menggunakan koleksi \texttt{produk}, buatlah Aggregation Pipeline (di \texttt{mongosh}) untuk:
+    \begin{enumerate}
+      \item Mengelompokkan produk berdasarkan \texttt{kategori} dan menampilkan \texttt{total} produk per kategori.
+      \item Mengelompokkan produk berdasarkan \texttt{kategori} dan menghitung harga rata-rata (\texttt{rata\_harga}) per kategori.
+      \item Menampilkan 5 produk termahal.
+      \item Menemukan kategori-kategori yang memiliki rata-rata harga di atas \texttt{1.000.000}.
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+# a) Total produk per kategori
+db.produk.aggregate([
+  {
+    $group: {
+      _id: "$kategori",
+      total: { $sum: 1 }
+    }
+  }
+])
+
+# b) Rata-rata harga per kategori
+db.produk.aggregate([
+  {
+    $group: {
+      _id: "$kategori",
+      rata_harga: { $avg: "$harga" }
+    }
+  }
+])
+
+# c) 5 produk termahal
+db.produk.aggregate([
+  { $sort: { harga: -1 } },
+  { $limit: 5 }
+])
+
+# d) Kategori dengan rata-rata harga > 1.000.000
+db.produk.aggregate([
+  {
+    $group: {
+      _id: "$kategori",
+      rata: { $avg: "$harga" }
+    }
+  },
+  {
+    $match: {
+      rata: { $gt: 1000000 }
+    }
+  }
+])
+\end{lstlisting}
+
+  \item \textbf{Aggregation dengan \texttt{\$unwind} dan \texttt{\$group}}
+
+    Misalkan setiap produk memiliki array \texttt{tags}:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId(...),
+  nama: "Keyboard Mechanical",
+  kategori: "Aksesoris",
+  harga: 750000,
+  tags: ["keyboard", "gaming", "mechanical"]
+}
+\end{lstlisting}
+
+    Buatlah satu Aggregation Pipeline yang:
+    \begin{enumerate}
+      \item Memecah array \texttt{tags} menjadi beberapa dokumen (gunakan \texttt{\$unwind}).
+      \item Mengelompokkan berdasarkan \texttt{tags} dan menghitung berapa kali setiap tag muncul (\texttt{jumlah}).
+      \item Mengurutkan hasil berdasarkan \texttt{jumlah} secara menurun.
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+db.produk.aggregate([
+  { $unwind: "$tags" },
+  {
+    $group: {
+      _id: "$tags",
+      jumlah: { $sum: 1 }
+    }
+  },
+  { $sort: { jumlah: -1 } }
+])
+\end{lstlisting}
+
+  \item \textbf{Hands-on Python: Query Lanjutan}
+
+    Dengan asumsi Anda memiliki koneksi Python seperti berikut:
+
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+\end{lstlisting}
+
+    Tulis kode Python (gunakan \texttt{pymongo}) untuk:
+    \begin{enumerate}
+      \item Mengambil semua produk kategori \texttt{"Elektronik"} dengan harga di atas \texttt{1.000.000} dan mencetaknya satu per satu.
+      \item Mengambil semua produk yang memiliki tag \texttt{"gaming"} dan menyimpan hasilnya dalam list Python lalu mencetak panjang list tersebut.
+      \item Menjalankan Aggregation Pipeline yang menghitung rata-rata harga per kategori dan mencetak hasilnya.
+    \end{enumerate}
+
+    \textbf{Jawaban (contoh):}
+\begin{lstlisting}[style=PythonStyle]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+# a) Elektronik, harga > 1.000.000
+hasil = produk.find({
+    "kategori": "Elektronik",
+    "harga": {"$gt": 1_000_000}
+})
+for p in hasil:
+    print(p)
+
+# b) Produk dengan tag "gaming"
+produk_gaming_cursor = produk.find({ "tags": "gaming" })
+produk_gaming = list(produk_gaming_cursor)
+print("Jumlah produk gaming:", len(produk_gaming))
+
+# c) Aggregation: rata-rata harga per kategori
+pipeline = [
+    {
+        "$group": {
+            "_id": "$kategori",
+            "rata_harga": { "$avg": "$harga" }
+        }
+    }
+]
+hasil_agg = db.produk.aggregate(pipeline)
+for row in hasil_agg:
+    print(row)
+\end{lstlisting}
+
+  \item \textbf{Membuat dan Menguji Index Sederhana}
+
+    Gunakan koleksi \texttt{produk}:
+    \begin{enumerate}
+      \item Tulis perintah untuk membuat indeks ascending pada field \texttt{kategori}.
+      \item Tulis perintah untuk membuat indeks descending pada field \texttt{harga}.
+      \item Jalankan query \texttt{db.produk.find(\{ kategori: "Elektronik" \}).explain("executionStats")} dan jelaskan:
+        \begin{enumerate}
+          \item Bagian mana yang menunjukkan indeks digunakan.
+          \item Apa arti \texttt{COLLSCAN} vs \texttt{IXSCAN}.
+        \end{enumerate}
+      \item Jelaskan konsekuensi jika koleksi tidak memiliki indeks sama sekali ketika ukuran data sudah mencapai jutaan dokumen.
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+# a) Indeks ascending pada kategori
+db.produk.createIndex({ kategori: 1 })
+
+# b) Indeks descending pada harga
+db.produk.createIndex({ harga: -1 })
+
+# c) Contoh pemanggilan explain (dijalankan di mongosh)
+db.produk.find({ kategori: "Elektronik" })
+  .explain("executionStats")
+\end{lstlisting}
+
+    \textbf{Penjelasan:}
+    \begin{enumerate}
+      \item Indeks digunakan jika pada output \texttt{explain()} bagian \texttt{"executionStats"} atau \texttt{"queryPlanner"} muncul:
+        \begin{itemize}
+          \item \texttt{"stage": "IXSCAN"} (atau rencana yang mengandung \texttt{IXSCAN}), dan
+          \item \texttt{"indexName"} yang berisi nama indeks, misalnya \texttt{"kategori\_1"}.
+        \end{itemize}
+      \item 
+        \begin{itemize}
+          \item \textbf{\texttt{COLLSCAN}}: MongoDB melakukan \emph{Collection Scan}, yaitu membaca seluruh dokumen dalam koleksi untuk mencari hasil yang sesuai. Ini lambat pada koleksi besar.
+          \item \textbf{\texttt{IXSCAN}}: MongoDB melakukan \emph{Index Scan}, yaitu hanya membaca struktur indeks untuk menemukan dokumen yang relevan. Ini jauh lebih cepat untuk pencarian terfilter.
+        \end{itemize}
+      \item Jika koleksi tidak memiliki indeks ketika ukurannya sudah jutaan dokumen:
+        \begin{itemize}
+          \item Hampir semua query akan melakukan \texttt{COLLSCAN}.
+          \item Waktu respon query akan meningkat drastis seiring pertumbuhan data.
+          \item Beban CPU dan I/O disk meningkat tajam.
+          \item Aplikasi bisa terasa lambat atau tidak responsif, terutama pada beban baca yang tinggi.
+        \end{itemize}
+    \end{enumerate}
+
+  \item \textbf{Compound Index dan Prefix Rule}
+
+    Pertimbangkan pola query berikut pada koleksi \texttt{produk}:
+\begin{lstlisting}[language=bash]
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 3000000 }
+}).sort({ harga: 1 })
+\end{lstlisting}
+
+    \begin{enumerate}
+      \item Tulis perintah untuk membuat compound index yang paling sesuai untuk query di atas.
+      \item Jelaskan mengapa urutan field dalam indeks penting untuk performa.
+      \item Berikan contoh query yang dapat menggunakan prefix index tersebut dan contoh query yang \emph{tidak} dapat memanfaatkannya.
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+# a) Compound index yang sesuai
+db.produk.createIndex({ kategori: 1, harga: 1 })
+\end{lstlisting}
+
+    \textbf{Penjelasan:}
+    \begin{enumerate}
+      \item Urutan field penting karena MongoDB menggunakan indeks dari field pertama sebagai \emph{entry point}.  
+            Dengan indeks \texttt{\{ kategori: 1, harga: 1 \}}, MongoDB bisa:
+            \begin{itemize}
+              \item Memfilter terlebih dahulu berdasarkan \texttt{kategori}.
+              \item Lalu menavigasi data yang sudah ter-filter berdasarkan \texttt{harga} sambil melakukan sorting ascending.
+            \end{itemize}
+            Jika urutannya dibalik (\texttt{\{ harga: 1, kategori: 1 \}}), query yang memfilter \texttt{kategori} lalu sort \texttt{harga} tidak akan seefisien, karena prefix indeks adalah \texttt{harga}, bukan \texttt{kategori}.
+      \item Contoh query yang \emph{dapat} menggunakan prefix index \texttt{\{ kategori: 1, harga: 1 \}}:
+\begin{lstlisting}[language=bash]
+# Menggunakan prefix { kategori: 1 }
+db.produk.find({ kategori: "Elektronik" })
+
+# Menggunakan prefix { kategori: 1, harga: 1 }
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 3000000 }
+}).sort({ harga: 1 })
+\end{lstlisting}
+
+          Contoh query yang \emph{tidak} dapat memanfaatkan indeks tersebut:
+\begin{lstlisting}[language=bash]
+# Hanya filter berdasarkan stok, tanpa kategori
+db.produk.find({ stok: 10 })
+\end{lstlisting}
+          karena \texttt{stok} bukan bagian dari prefix indeks \texttt{\{ kategori: 1, harga: 1 \}}.
+    \end{enumerate}
+
+  \item \textbf{Text Search Index dan Relevansi}
+
+    Misalkan terdapat koleksi \texttt{artikel} dengan struktur:
+
+\begin{lstlisting}[language=bash]
+{
+  _id: ObjectId(...),
+  judul: "Memahami MongoDB untuk Aplikasi Skala Besar",
+  konten: "MongoDB adalah basis data dokumen yang fleksibel...",
+  kategori: "database"
+}
+\end{lstlisting}
+
+    \begin{enumerate}
+      \item Tulis perintah untuk membuat text index pada field \texttt{judul} dan \texttt{konten}.
+      \item Tulis query untuk mencari artikel yang mengandung kata \texttt{"mongodb"}.
+      \item Tulis query untuk mencari artikel yang mengandung frasa persis \texttt{"basis data dokumen"}.
+      \item Tulis query untuk mencari artikel tentang \texttt{"mongodb"} tetapi tidak mengandung kata \texttt{"SQL"}.
+      \item Tulis query yang menampilkan skor relevansi text search dan mengurutkan hasil berdasarkan skor tersebut.
+      \item Jelaskan secara singkat perbedaan pendekatan text search index dengan pencarian berbasis \texttt{regex} pada field \texttt{konten}.
+    \end{enumerate}
+
+    \textbf{Jawaban:}
+\begin{lstlisting}[language=bash]
+# a) Text index pada judul dan konten
+db.artikel.createIndex({
+  judul: "text",
+  konten: "text"
+})
+
+# b) Cari artikel yang mengandung kata "mongodb"
+db.artikel.find({
+  $text: { $search: "mongodb" }
+})
+
+# c) Cari artikel dengan frasa persis "basis data dokumen"
+db.artikel.find({
+  $text: { $search: "\"basis data dokumen\"" }
+})
+
+# d) Cari artikel tentang "mongodb" tetapi tidak mengandung "SQL"
+db.artikel.find({
+  $text: { $search: "mongodb -SQL" }
+})
+
+# e) Cari artikel, tampilkan skor relevansi, dan sort berdasarkan skor
+db.artikel.find(
+  { $text: { $search: "mongodb" } },
+  { score: { $meta: "textScore" } }
+).sort({
+  score: { $meta: "textScore" }
+})
+\end{lstlisting}
+
+    \textbf{Penjelasan (f):}
+    \begin{itemize}
+      \item \textbf{Text search index}:
+        \begin{itemize}
+          \item Menggunakan struktur indeks khusus yang menyimpan token kata.
+          \item Mendukung stemming, stop words, dan skor relevansi.
+          \item Jauh lebih efisien untuk pencarian teks pada banyak dokumen.
+          \item Dapat mengurutkan berdasarkan relevansi (\texttt{textScore}).
+        \end{itemize}
+      \item \textbf{Regex pada konten}:
+        \begin{itemize}
+          \item Biasanya mengakibatkan \texttt{COLLSCAN} (kecuali pola sangat khusus).
+          \item Tidak memiliki skor relevansi.
+          \item Bekerja sebagai pencarian pola string mentah, tanpa pemahaman kata.
+          \item Lebih mahal secara performa pada koleksi besar.
+        \end{itemize}
+    \end{itemize}
+
+  \item \textbf{Indexing Best Practices (Konseptual)}
+
+    Jawab pertanyaan konseptual berikut:
+    \begin{enumerate}
+      \item Mengapa terlalu banyak indeks dapat memperlambat operasi \texttt{insert}, \texttt{update}, dan \texttt{delete}?
+      \item Apa yang dimaksud dengan \emph{selektivitas indeks} dan mengapa hal ini penting?
+      \item Pada kasus apa \texttt{partial index} lebih menguntungkan dibanding indeks biasa? Berikan satu contoh kondisi \texttt{partialFilterExpression}.
+      \item Mengapa ukuran RAM server perlu diperhatikan ketika mendesain indeks?
+      \item Berikan contoh perbedaan kebutuhan indeks antara:
+        \begin{enumerate}
+          \item Aplikasi transaksi cepat (misalnya marketplace).
+          \item Aplikasi analitik (misalnya dashboard laporan harian).
+        \end{enumerate}
+    \end{enumerate}
+
+    \textbf{Jawaban (konseptual):}
+    \begin{enumerate}
+      \item Terlalu banyak indeks memperlambat operasi tulis karena setiap kali dokumen di-\texttt{insert}, di-\texttt{update}, atau di-\texttt{delete}, MongoDB harus:
+        \begin{itemize}
+          \item Memperbarui seluruh struktur indeks yang terkait.
+          \item Melakukan penulisan tambahan ke disk untuk setiap indeks.
+        \end{itemize}
+        Semakin banyak indeks, semakin besar overhead penulisan.
+      \item \emph{Selektivitas indeks} adalah ukuran seberapa baik indeks dapat menyaring dokumen (berapa banyak nilai berbeda/unik yang dimiliki suatu field).
+        \begin{itemize}
+          \item Field dengan banyak nilai unik (misalnya \texttt{email}) memiliki selektivitas tinggi dan indeksnya sangat berguna.
+          \item Field dengan sedikit nilai (misalnya \texttt{status: "aktif"/"non-aktif"}) memiliki selektivitas rendah; indeks pada field ini sering kurang efektif karena terlalu banyak dokumen yang cocok.
+        \end{itemize}
+      \item \texttt{Partial index} menguntungkan ketika hanya subset dokumen tertentu yang sering di-query, misalnya hanya dokumen dengan \texttt{status = "aktif"}.
+        
+        Contoh:
+\begin{lstlisting}[language=bash]
+db.produk.createIndex(
+  { nama: 1 },
+  { partialFilterExpression: { status: "aktif" } }
+)
+\end{lstlisting}
+        Dengan demikian:
+        \begin{itemize}
+          \item Indeks lebih kecil karena hanya mencakup produk aktif.
+          \item Query terhadap produk aktif menjadi cepat.
+          \item Operasi tulis pada produk non-aktif tidak membebani indeks ini.
+        \end{itemize}
+      \item Ukuran RAM penting karena:
+        \begin{itemize}
+          \item MongoDB berusaha menyimpan bagian penting indeks di memori.
+          \item Jika total ukuran indeks jauh melampaui RAM, sistem akan sering \emph{swap} dan melakukan I/O disk, yang membuat query menjadi lambat.
+          \item Desain indeks yang baik harus mempertimbangkan agar indeks yang sering dipakai dapat \emph{muat} di memori.
+        \end{itemize}
+      \item Perbedaan kebutuhan indeks:
+        \begin{enumerate}
+          \item \textbf{Aplikasi transaksi cepat (marketplace)}:
+            \begin{itemize}
+              \item Banyak operasi \texttt{insert}/\texttt{update}/\texttt{delete}.
+              \item Indeks harus minimal dan fokus pada query paling kritis (misalnya pencarian produk, user login, order aktif).
+              \item Terlalu banyak indeks akan menghambat throughput transaksi.
+            \end{itemize}
+          \item \textbf{Aplikasi analitik (dashboard laporan)}:
+            \begin{itemize}
+              \item Lebih banyak operasi \texttt{read} dan agregasi daripada tulis.
+              \item Indeks dapat lebih kaya (compound index untuk berbagai dimensi analitik).
+              \item Dapat memanfaatkan indeks untuk mendukung banyak kombinasi filter dan sort yang digunakan dalam laporan.
+            \end{itemize}
+        \end{enumerate}
+    \end{enumerate}
+
+\end{enumerate}
+
