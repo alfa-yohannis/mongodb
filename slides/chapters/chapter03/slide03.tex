@@ -1,0 +1,1390 @@
+\documentclass[aspectratio=169, table]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{listings} 
+\usepackage[strings]{underscore}
+\usepackage{caption}
+\usepackage{float}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, trees, positioning}
+
+
+\renewcommand{\lstlistingname}{} 
+
+\makeatletter
+\def\input@path{{../../themes/Pradita}}
+\makeatother
+
+\usetheme{Pradita}
+
+\subtitle{NoSQL with MongoDB}
+
+\title{Session-03:\\\LARGE{Advanced Querying and\\Indexing in MongoDB}
+%\vspace{5pt}
+}
+\date[Serial]{\scriptsize {PRU/SPMI/FR-BM-18/0222}}
+\author[Pradita]{\small{\textbf{Alfa Yohannis}}}
+
+
+% Define Python language style for listings
+\lstdefinestyle{PythonStyle}{
+    language=Python,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=lines,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    backgroundcolor=\color{lightgray!10},
+    tabsize=2,
+    captionpos=b
+}
+
+\lstdefinelanguage{bash} {
+	keywords={},
+	basicstyle=\ttfamily\small,
+	keywordstyle=\color{blue}\bfseries,
+	ndkeywords={},
+	ndkeywordstyle=\color{purple}\bfseries,
+	sensitive=true,
+	numbers=left,
+	numberstyle=\tiny\color{gray},
+	breaklines=true,
+	frame=lines,
+	backgroundcolor=\color{lightgray!10},
+	tabsize=2,
+	comment=[l]{\#},
+	morecomment=[s]{/*}{*/},
+	commentstyle=\color{gray}\ttfamily,
+	stringstyle=\color{purple}\ttfamily,
+	showstringspaces=false,
+	morestring=[s]{"}{"}
+}
+
+\begin{document}
+
+\frame{\titlepage}
+
+% Add table of contents slide
+\begin{frame}[fragile]{Contents}
+\vspace{15pt}
+\begin{columns}[t]
+\begin{column}{.4\textwidth}
+\tableofcontents[sections={1-4}]
+\end{column}
+\begin{column}{.6\textwidth}
+\tableofcontents[sections={5-7}]
+\end{column}
+\end{columns}
+\end{frame}
+
+\section{Filtering with Logical and Comparison Operators}
+
+\begin{frame}[fragile]{Comparison Operators in \texttt{mongosh}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item Use comparison operators to filter by numeric ranges.
+      \item Common operators: \texttt{\$gt}, \texttt{\$lt}, \texttt{\$gte}, \texttt{\$lte}, \texttt{\$ne}.
+      \item Very useful for price, stock, or date-based filters.
+      \item Filter keeps Indonesian field names for consistency.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Products with price greater than 1 million
+db.produk.find({ harga: { $gt: 1000000 } })
+
+# Products with stock between 10 and 50
+db.produk.find({
+  stok: { $gte: 10, $lte: 50 }
+})
+
+# Products that are not in category 'Aksesoris'
+db.produk.find({ kategori: { $ne: "Aksesoris" } })
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Logical Operators in \texttt{mongosh}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item Logical operators combine multiple conditions.
+      \item Main operators: \texttt{\$and}, \texttt{\$or}, \texttt{\$nor}, \texttt{\$not}.
+      \item Used when queries must satisfy complex business rules.
+      \item Common in e-commerce, inventory, and dashboards.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Price > 1 million AND category Elektronik
+db.produk.find({
+  $and: [
+    { harga: { $gt: 1000000 } },
+    { kategori: "Elektronik" }
+  ]
+})
+
+# Category 'Elektronik' OR 'Komputer'
+db.produk.find({
+  $or: [
+    { kategori: "Elektronik" },
+    { kategori: "Komputer" }
+  ]
+})
+
+# Products with stock NOT between 1 and 10
+db.produk.find({
+  stok: { $not: { $gte: 1, $lte: 10 } }
+})
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Combining Comparison \& Logic in \texttt{mongosh}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item Comparison and logical operators can be mixed.
+      \item Typical pattern: simple equality + range filters.
+      \item Good for “advanced search” forms in applications.
+      \item Still uses JSON-like syntax in \texttt{mongosh}.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Elektronik products, price < 5 million,
+# and stock between 5 and 100
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 5000000 },
+  $and: [
+    { stok: { $gte: 5 } },
+    { stok: { $lte: 100 } }
+  ]
+})
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Logical \& Comparison Operators in Python}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.50\textwidth}
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+from pymongo import MongoClient
+
+client = MongoClient(
+    "mongodb://localhost:27017/"
+)
+db = client["toko_online"]
+produk = db["produk"]
+
+# Price > 1M AND Elektronik
+hasil = produk.find({
+    "$and": [
+        {"harga": {"$gt": 1_000_000}},
+        {"kategori": "Elektronik"}
+    ]
+})
+for p in hasil:
+    print(p)
+\end{lstlisting}
+  \end{column}
+
+  \begin{column}{0.50\textwidth}
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize, firstnumber=18]
+# Category Elektronik OR Komputer
+hasil2 = produk.find({
+    "$or": [
+        {"kategori": "Elektronik"},
+        {"kategori": "Komputer"}
+    ]
+})
+print(list(hasil2))
+
+# Stock NOT between 1 and 10
+hasil3 = produk.find({
+    "stok": {
+      "$not": { "$gte": 1, "$lte": 10 }
+    }
+})
+print(list(hasil3))
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\section{Querying Arrays and Embedded Documents}
+
+% --- Frame 1 ---
+\begin{frame}[fragile]{Basic Array Queries in \texttt{mongosh}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item Arrays can be queried directly by matching any element.
+      \item Dot notation enables filtering inside subdocuments.
+      \item Useful for tags, order items, user addresses, etc.
+      \item MongoDB automatically inspects array elements.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Products containing the tag "gaming"
+db.produk.find({ tags: "gaming" })
+
+# Orders with at least one item qty > 1
+db.orders.find({
+  "items.qty": { $gt: 1 }
+})
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+% --- Frame 2 ---
+\begin{frame}[fragile]{Array Operators: \texttt{\$all}, \texttt{\$in}, \texttt{\$nin}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item \texttt{\$all}: ensures array contains all listed values.
+      \item \texttt{\$in}: matches any value from a list.
+      \item \texttt{\$nin}: excludes values from a list.
+      \item Ideal for category/tag-based filtering.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Products containing BOTH tags
+db.produk.find({
+  tags: { $all: ["elektronik", "premium"] }
+})
+
+# Category is either Elektronik or Audio
+db.produk.find({
+  kategori: { $in: ["Elektronik","Audio"] }
+})
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+% --- Frame 3 ---
+\begin{frame}[fragile]{\texttt{\$elemMatch} for Complex Array Elements}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item Use \texttt{\$elemMatch} when multiple conditions must match the same array element.
+      \item Avoids mixing values across different array entries.
+      \item Perfect for order item filtering with qty + price rules.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Items:
+# { product_id, qty, price }
+db.orders.find({
+  items: {
+    $elemMatch: {
+      qty: { $gt: 1 },
+      price: { $gt: 600000 }
+    }
+  }
+})
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+% --- Frame 4 ---
+\begin{frame}[fragile]{Queries on Arrays \& Embedded Docs in Python}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.50\textwidth}
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+from pymongo import MongoClient
+
+client = MongoClient()
+db = client["toko_online"]
+
+# Products with tag "gaming"
+gaming = db.produk.find({
+    "tags": "gaming"
+})
+print(list(gaming))
+
+# Orders with one item
+# qty > 1 AND price > 600000
+orders = db.orders.find({
+    "items": {
+        "$elemMatch": {
+            "qty": {"$gt": 1},
+            "price": {"$gt": 600000}
+        }
+    }
+})
+\end{lstlisting}
+  \end{column}
+
+  \begin{column}{0.50\textwidth}
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+print(list(orders))
+
+# Orders shipped to Tangerang
+tangerang = db.orders.find({
+    "shipping.city": "Tangerang"
+})
+print(list(tangerang))
+
+# Embedded doc with regex
+jne = db.orders.find({
+    "shipping.courier": "JNE",
+    "shipping.address": {
+        "$regex": "Melati"
+    }
+})
+print(list(jne))
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\section{Aggregation Pipeline}
+
+% --- Frame 1 ---
+\begin{frame}[fragile]{Aggregation Pipeline Basics}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+    \begin{itemize}
+      \item Aggregation Pipeline processes documents through ordered stages.
+      \item Each stage receives input documents, transforms them, and passes them on.
+      \item Similar to data–flow processing (e.g.\ Spark pipelines).
+      \item Runs entirely on the server for efficient data analysis.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.koleksi.aggregate([
+  { tahap_1 },
+  { tahap_2 },
+  { tahap_3 }
+])
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+% --- Frame 2 ---
+\begin{frame}[fragile]{Agg. Stages: \texttt{\$match}, \texttt{\$project}, \texttt{\$group}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item \texttt{\$match}: filter documents, similar to \texttt{find()}.
+      \item \texttt{\$project}: select or reshape fields in the output.
+      \item \texttt{\$group}: group documents and compute aggregates.
+      \item These stages often appear early in most pipelines.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+{ $match: { kategori: "Elektronik" } }
+
+{ $project: { nama: 1, harga: 1, _id: 0 } }
+
+{
+  $group: {
+    _id: "$kategori",
+    total_produk: { $sum: 1 },
+    rata_harga: { $avg: "$harga" }
+  }
+}
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+% --- Frame 3 ---
+\begin{frame}[fragile]{Stages: \texttt{\$sort}, \texttt{\$limit}, \texttt{\$lookup}, \texttt{\$unwind}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item \texttt{\$sort}: order documents by one or more fields.
+      \item \texttt{\$limit}: restrict the number of output documents.
+      \item \texttt{\$lookup}: join with another collection.
+      \item \texttt{\$unwind}: split array field into multiple documents.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+{ $sort: { harga: -1 } }
+
+{ $limit: 5 }
+
+{
+  $lookup: {
+    from: "kategori",
+    localField: "kategori_id",
+    foreignField: "_id",
+    as: "detail_kategori"
+  }
+}
+
+{ $unwind: "$items" }
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+%-----------------------------------------
+
+% You can keep your existing \section / \subsection structure.
+% This snippet only adds 5 frames.
+
+\begin{frame}[fragile]{Example Product Document for Aggregation}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item Sample \texttt{produk} document used in aggregation examples.
+      \item Contains basic fields and an array of \texttt{tags}.
+      \item Fields like \texttt{kategori}, \texttt{harga}, and \texttt{tags}
+            are used in grouping and unwinding.
+      \item BSON document is stored in a MongoDB collection named \texttt{produk}.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+{
+  _id: ObjectId(...),
+  nama: "Keyboard Mechanical",
+  kategori: "Aksesoris",
+  harga: 750000,
+  stok: 20,
+  tags: ["keyboard", "gaming", "mechanical"]
+}
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Total Products per Category with \texttt{\$group}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.40\textwidth}
+    \begin{itemize}
+      \item Use \texttt{\$group} to count documents per category.
+      \item \texttt{\_id} holds the grouping key: \texttt{"\$kategori"}.
+      \item \texttt{total} uses \texttt{\$sum: 1} to count products.
+      \item Same pipeline can be executed from \texttt{mongosh} or Python.
+      \item \texttt{\$avg} computes average price per category.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.60\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.aggregate([
+  { $group: { _id: "$kategori", total: { $sum: 1 } } }
+])
+\end{lstlisting}
+
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+hasil = db.produk.aggregate([
+    {"$group": {"_id": "$kategori",
+                "total": {"$sum": 1}}}
+])
+print(list(hasil))
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.aggregate([
+  { $group: { _id: "$kategori",
+              rata_harga: { $avg: "$harga" } } }
+])
+\end{lstlisting}
+
+\end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Average Price per Category \& Filtering by Avg}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.40\textwidth}
+    \begin{itemize}
+      \item Combine \texttt{\$sort} and \texttt{\$limit}.
+      \item Result documents contain \texttt{\_id} and average field.
+      \item A follow-up \texttt{\$match} can filter categories
+            with high average prices.
+      \item Useful for simple analytics like “premium” categories.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.60\textwidth}
+
+
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+hasil = db.produk.aggregate([
+    {"$group": {"_id": "$kategori",
+                "rata_harga": {"$avg": "$harga"}}}
+])
+print(list(hasil))
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.aggregate([
+  { $group: { _id: "$kategori",
+              rata: { $avg: "$harga" } }},
+  { $match: { rata: { $gt: 1000000 } }}
+])
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.aggregate([
+  { $sort: { harga: -1 } },
+  { $limit: 5 }
+])
+\end{lstlisting}
+
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Top 5 Most Expensive Products}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.40\textwidth}
+    \begin{itemize}
+      \item Sort by \texttt{harga} descending (\texttt{-1}).
+      \item Limit output to the 5 most expensive products.
+      \item Pattern is identical in shell and Python.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.60\textwidth}
+
+
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+hasil = db.produk.aggregate([
+    {"$sort": {"harga": -1}},
+    {"$limit": 5}
+])
+print(list(hasil))
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+% ---------------- FRAME 4 ----------------
+\begin{frame}[fragile]{Lookup Join \& Tag Frequency (mongosh)}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item \texttt{\$lookup} joins \texttt{produk} with \texttt{kategori}.
+      \item \texttt{\$unwind} expands array \texttt{tags}.
+      \item Grouping tags reveals tag popularity.
+      \item All examples pulled exactly from the text.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.aggregate([
+  {
+    $lookup: {
+      from: "kategori",
+      localField: "kategori_id",
+      foreignField: "_id",
+      as: "kategori_detail"
+    }
+  }
+])
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.aggregate([
+  { $unwind: "$tags" },
+  { $group: { _id: "$tags",
+              jumlah: { $sum: 1 } } },
+  { $sort: { jumlah: -1 } }
+])
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+% ---------------- FRAME 5 ----------------
+\begin{frame}[fragile]{Lookup Join \& Tag Frequency (Python)}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.45\textwidth}
+    \begin{itemize}
+      \item Python version of \texttt{\$lookup} and \texttt{\$unwind}.
+      \item Uses the same pipelines as mongosh.
+      \item Converts results to lists for display.
+      \item Ideal for backend analytics endpoints.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.55\textwidth}
+\begin{lstlisting}[style=PythonStyle,basicstyle=\ttfamily\scriptsize]
+hasil = db.produk.aggregate([
+    {
+        "$lookup": {
+            "from": "kategori",
+            "localField": "kategori_id",
+            "foreignField": "_id",
+            "as": "kategori_detail"
+        }
+    }
+])
+print(list(hasil))
+\end{lstlisting}
+
+\begin{lstlisting}[style=PythonStyle,basicstyle=\ttfamily\scriptsize]
+hasil = db.produk.aggregate([
+    {"$unwind": "$tags"},
+    {"$group": {"_id": "$tags",
+                "jumlah": {"$sum": 1}}},
+    {"$sort": {"jumlah": -1}}
+])
+print(list(hasil))
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\section{Creating Indexes}
+
+\begin{frame}[fragile]{Creating Basic Indexes in MongoDB}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+  \begin{itemize}
+    \item Indexes speed up queries by avoiding full collection scans.
+    \item MongoDB auto-creates an index on \texttt{\_id}, others must be added manually.
+    \item Single-field indexes support fast lookups on frequent query fields.
+    \item Ascending (\texttt{1}) and descending (\texttt{-1}) orders are supported.
+    \item Ideal for improving lookup on fields like names and prices.
+  \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Single-field index on 'nama'
+db.produk.createIndex({ nama: 1 })
+
+# Descending index on 'harga'
+db.produk.createIndex({ harga: -1 })
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Composite index (kategori + harga)
+db.produk.createIndex({ kategori: 1, harga: 1 })
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Composite, Unique, and Array Indexes}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+  \begin{itemize}
+    \item Composite indexes optimize multi-condition queries.
+    \item Unique indexes enforce data integrity (e.g., unique emails).
+    \item Indexes on array fields automatically become multikey.
+    \item Multikey indexes index each element of an array.
+    \item Essential for tags, categories, or multi-value fields.
+  \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Query benefiting from composite index
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 5000000 }
+})
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Unique index
+db.users.createIndex({ email: 1 }, { unique: true })
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Multikey index on array field
+db.produk.createIndex({ tags: 1 })
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Creating Indexes Using Python (PyMongo)}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.34\textwidth}
+  \begin{itemize}
+    \item Python uses \texttt{create\_index()} for index creation.
+    \item Syntax mirrors MongoDB shell but uses Python dictionaries.
+    \item Composite indexes use ordered tuples.
+    \item Unique indexes prevent duplicate values automatically.
+    \item Simple and consistent API across collections.
+  \end{itemize}
+  \end{column}
+
+  \begin{column}{0.61\textwidth}
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+from pymongo import MongoClient
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+
+# Single-field index
+db.produk.create_index({ "nama": 1 })
+\end{lstlisting}
+
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+# Composite index
+db.produk.create_index([
+    ("kategori", 1),
+    ("harga", 1)
+])
+\end{lstlisting}
+
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+# Unique index
+db.users.create_index(
+    [("email", 1)],
+    unique=True
+)
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Inspecting, Dropping, and Explaining Indexes}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+  \begin{itemize}
+    \item MongoDB allows listing all indexes on a collection.
+    \item Indexes can be dropped individually by name.
+    \item \texttt{explain()} reveals whether a query uses an index.
+    \item Critical for performance tuning and debugging.
+    \item Helps developers validate index usage in real workloads.
+  \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# List indexes
+db.produk.getIndexes()
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Drop a specific index
+db.produk.dropIndex("nama_1")
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Check if a query uses an index
+db.produk.find({
+  kategori: "Elektronik"
+}).explain()
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Compound Index}
+
+\begin{frame}[fragile]{Understanding Compound Indexes}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+    \begin{itemize}
+      \item A compound index contains more than one field.
+      \item Used when queries filter or sort on multiple fields.
+      \item Field order is critical: \texttt{\{kategori:1, harga:1\}} ≠ \texttt{\{harga:1, kategori:1\}}.
+      \item Should reflect real-world query patterns.
+      \item Common in e-commerce, blogs, and user-management systems.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Compound index: kategori first, then harga
+db.produk.createIndex({ kategori: 1, harga: 1 })
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Inefficient ordering for most applications
+db.produk.createIndex({ harga: 1, kategori: 1 })
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Filtering and Sorting with Compound Index}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+    \begin{itemize}
+      \item Compound indexes accelerate both filtering and sorting.
+      \item Queries must follow the index field order to be optimized.
+      \item Sorting on \texttt{harga} works if \texttt{kategori} appears first.
+      \item Useful for product listings, category browsing, etc.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Query optimized by { kategori: 1, harga: 1 }
+db.produk.find({
+  kategori: "Elektronik"
+}).sort({ harga: 1 })
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Three-field compound index
+db.artikel.createIndex({
+  penulis: 1,
+  tanggal: -1,
+  views: -1
+})
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Query benefiting from the index
+db.artikel.find({
+  penulis: "Dina",
+  tanggal: { $gte: ISODate("2025-01-01") }
+}).sort({ tanggal: -1, views: -1 })
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Prefix Rule for Compound Indexes}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+    \begin{itemize}
+      \item MongoDB uses only the leftmost fields of a compound index.
+      \item Known as the \textit{prefix rule}.
+      \item Valid prefixes start from the first field onward.
+      \item Queries not using the prefix cannot use the index.
+      \item Critical concept for performance tuning.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Index
+{ kategori: 1, harga: 1, stok: -1 }
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Valid prefixes
+{ kategori: 1 }
+{ kategori: 1, harga: 1 }
+{ kategori: 1, harga: 1, stok: -1 }
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Uses index prefixes
+db.produk.find({ kategori: "Audio" })
+db.produk.find({
+  kategori: "Audio",
+  harga: { $gt: 500000 }
+})
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Does NOT use index
+db.produk.find({ stok: 10 })
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Creating Compound Indexes with PyMongo}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item Python uses \texttt{create\_index()} for compound indexes.
+      \item Tuples define ordering of fields.
+      \item Strategy identical to MongoDB shell.
+      \item Supports multi-field indexes of any length.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+from pymongo import MongoClient
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+
+# Compound index kategori + harga
+db.produk.create_index([
+    ("kategori", 1),
+    ("harga", 1)
+])
+\end{lstlisting}
+
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+# Compound index with 3 fields
+db.artikel.create_index([
+    ("penulis", 1),
+    ("tanggal", -1),
+    ("views", -1)
+])
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Unique Compound Index and Explain Plan}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.42\textwidth}
+    \begin{itemize}
+      \item Compound indexes can also be unique.
+      \item Useful for enforcing combined uniqueness (email + phone).
+      \item \texttt{explain()} reveals index usage in queries.
+      \item Look for \texttt{"indexName"} to confirm.
+      \item Essential for production performance checks.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.58\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Unique compound index
+db.users.createIndex(
+  { email: 1, nomor_hp: 1 },
+  { unique: true }
+)
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Checking index usage
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 3000000 }
+}).sort({ harga: 1 }).explain()
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+"indexName": "kategori_1_harga_1"
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+%---------------
+\section{Text Search Index}
+
+
+% 4 frames for Text Search Index
+
+\begin{frame}[fragile]{Creating Text Indexes in MongoDB}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+    \begin{itemize}
+      \item Text index is optimized for full-text search on string fields.
+      \item Works on one or multiple fields combined into a single index.
+      \item Much faster than plain string or regex search on large collections.
+      \item Ideal for article search, product search, comments, and posts.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Membuat text index pada field 'judul' dan 'konten'
+db.artikel.createIndex({
+  judul: "text",
+  konten: "text"
+})
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Mencari artikel yang mengandung kata "mongodb"
+db.artikel.find({
+  $text: { $search: "mongodb" }
+})
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Phrase Search, Exclusion, \& Relevance Score}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+    \begin{itemize}
+      \item Phrase search finds exact word sequences using quotes.
+      \item Minus operator excludes documents containing certain words.
+      \item \texttt{textScore} provides a relevance score for each match.
+      \item Sorting by \texttt{textScore} shows the most relevant results first.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.artikel.find({
+  $text: { $search: "\"basis data dokumen\"" }
+})
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Mencari dokumen tentang mongodb tetapi
+# tidak mengandung kata 'SQL'
+db.artikel.find({
+  $text: { $search: "mongodb -SQL" }
+})
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.artikel.find(
+  { $text: { $search: "database scalable" } },
+  { score: { $meta: "textScore" } }
+).sort({
+  score: { $meta: "textScore" }
+})
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Using Text Index from Python (PyMongo)}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.3\textwidth}
+    \begin{itemize}
+      \item PyMongo uses \texttt{create\_index()} for text indexes.
+      \item Field type \texttt{"text"} matches MongoDB shell syntax.
+      \item Text search is done with \texttt{"\$text"} and \texttt{"\$search"}.
+      \item \texttt{textScore} can be projected and used for sorting.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.65\textwidth}
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["blog"]
+
+# Text index pada judul dan konten
+db.artikel.create_index([
+    ("judul", "text"),
+    ("konten", "text")
+])
+\end{lstlisting}
+
+\begin{lstlisting}[style=PythonStyle,
+basicstyle=\ttfamily\scriptsize]
+hasil = db.artikel.find(
+    { "$text": { "$search": "mongodb" } },
+    { "score": { "$meta": "textScore" } }
+).sort([
+    ("score", { "$meta": "textScore" })
+])
+
+print(list(hasil))
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Weights and Language Options for Text Index}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.43\textwidth}
+    \begin{itemize}
+      \item Weights make some fields more important than others.
+      \item Only one text index per collection, but it can cover many fields.
+      \item \texttt{default\_language} controls stemming and stop words.
+      \item A \texttt{language} field can override language per document.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.57\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.artikel.createIndex(
+  { judul: "text", konten: "text" },
+  { weights: { judul: 5, konten: 1 } }
+)
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.artikel.createIndex(
+  { konten: "text" },
+  { default_language: "indonesian" }
+)
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+{
+  judul: "Belajar MongoDB",
+  konten: "Ini adalah artikel contoh.",
+  language: "indonesian"
+}
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Indexing Best Practices}
+
+
+\begin{frame}[fragile]{\LARGE{Indexing Best Practices: Query Patterns \& Selectivity}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.44\textwidth}
+    \begin{itemize}
+      \item Index design must follow real query patterns.
+      \item High-selectivity fields (email, product code) are ideal.
+      \item Low-selectivity fields (gender, active/non-active) rarely help.
+      \item Compound index order must match filter + sorting order.
+      \item Avoid guessing—measure real workload.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.56\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.find({
+  kategori: "Elektronik",
+  harga: { $lt: 2000000 }
+}).sort({ harga: 1 })
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.createIndex({ kategori: 1, harga: 1 })
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Index Management: Avoid Over-Indexing}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.44\textwidth}
+    \begin{itemize}
+      \item Too many indexes slow down insert/update/delete operations.
+      \item Review existing indexes regularly using \texttt{getIndexes()}.
+      \item Remove outdated or unused indexes.
+      \item Use \texttt{explain()} to confirm index usage.
+      \item Add indexes only after analyzing execution stats.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.56\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.getIndexes()
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.dropIndex("kategori_1_harga_1")
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.orders.find({ "shipping.city": "Tangerang" })
+  .explain("executionStats")
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.orders.createIndex({ "shipping.city": 1 })
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{\LARGE{Partial Indexes, Multikey Arrays, and Memory Limits}}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.44\textwidth}
+    \begin{itemize}
+      \item Avoid indexing large or frequently changing arrays.
+      \item Multikey updates may be expensive on big arrays.
+      \item Partial indexes reduce index size for large datasets.
+      \item Ensure index size fits available RAM.
+      \item Index strategy must follow application type and workload.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.56\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.createIndex(
+  { nama: 1 },
+  { partialFilterExpression: { status: "aktif" } }
+)
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+db.produk.dropIndex("kategori_1_harga_1")
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Avoid large multikey updates on big arrays
+# (from best practice discussion)
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Summary}
+
+\begin{frame}{Summary}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.4\textwidth}
+    \begin{itemize}
+      \item \textbf{Query Operators}. Comparison and logical operators (\$gt, \$lt, \$and, \$or) enable expressive filtering.
+      \item \textbf{Arrays \& Embedded Docs}. Dot notation, \$in, \$all, and \$elemMatch provide efficient access to nested data.
+      \item \textbf{Aggregation Pipeline}. Stages like \$match, \$project, \$group, and \$lookup support server-side processing.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.55\textwidth}
+    \begin{itemize}
+      \item \textbf{Index Strategy}. Indexing must follow query patterns, supporting filters and sorting.
+      \item \textbf{Types \& Practices}. Use single-field, compound, and text indexes; prioritize high-selectivity fields; order keys well; verify with \texttt{explain()}.
+      \item \textbf{Over-Indexing}. Too many indexes slow writes—remove unused ones for efficiency.
+      \item \textbf{Outcome}. Effective querying + indexing yields fast, scalable MongoDB applications.
+    \end{itemize}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+
+
+
+\end{document}

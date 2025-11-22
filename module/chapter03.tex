@@ -1,4 +1,4 @@
-\chapter{Query and Indexing for Performance Optimization}
+\chapter{Advanced Querying and Indexing for Performance Optimization}
 
 
 \section{Advanced Querying}
@@ -269,7 +269,7 @@ Digunakan untuk menampilkan, menyembunyikan, atau membentuk ulang field.
 { $project: { nama: 1, harga: 1, _id: 0 } }
 \end{lstlisting}
 
-\textbf{3. \texttt{\$group} – mengelompokkan data dan melakukan perhitungan}  
+\textbf{3. \texttt{\$group}} – mengelompokkan data dan melakukan perhitungan
 Mirip konsepnya dengan \texttt{GROUP BY} di SQL.
 
 \begin{lstlisting}[language=bash]
@@ -282,36 +282,36 @@ Mirip konsepnya dengan \texttt{GROUP BY} di SQL.
 }
 \end{lstlisting}
 
-%\textbf{4. \texttt{\$sort}} – mengurutkan dokumen  
-%Sama seperti metode sort() pada query biasa.
-%
-%\begin{lstlisting}[language=bash]
-%{ $sort: { harga: -1 } }
-%\end{lstlisting}
-%
-%\textbf{5. \texttt{\$limit}} – membatasi jumlah dokumen output  
-%\texttt{\$skip} juga sering digunakan bersama \texttt{\$limit}.
-%
-%\begin{lstlisting}[language=bash]
-%{ $limit: 5 }
-%\end{lstlisting}
-%
-%\textbf{6. \texttt{\$lookup}} – melakukan join antar koleksi  
-%Digunakan untuk menggabungkan dokumen dari koleksi lain.
-%
-%\begin{lstlisting}[language=bash]
-%{
-%  $lookup: {
-%    from: "kategori",
-%    localField: "kategori_id",
-%    foreignField: "_id",
-%    as: "detail_kategori"
-%  }
-%}
-%\end{lstlisting}
-%
-%\textbf{7. \texttt{\$unwind}} – memecah array menjadi beberapa dokumen}  
-%Sangat berguna untuk data yang memiliki array besar.
+\textbf{4. \texttt{\$sort}} – mengurutkan dokumen  
+Sama seperti metode sort() pada query biasa.
+
+\begin{lstlisting}[language=bash]
+{ $sort: { harga: -1 } }
+\end{lstlisting}
+
+\textbf{5. \texttt{\$limit}} – membatasi jumlah dokumen output  
+\texttt{\$skip} juga sering digunakan bersama \texttt{\$limit}.
+
+\begin{lstlisting}[language=bash]
+{ $limit: 5 }
+\end{lstlisting}
+
+\textbf{6. \texttt{\$lookup}} – melakukan join antar koleksi  
+Digunakan untuk menggabungkan dokumen dari koleksi lain.
+
+\begin{lstlisting}[language=bash]
+{
+  $lookup: {
+    from: "kategori",
+    localField: "kategori_id",
+    foreignField: "_id",
+    as: "detail_kategori"
+  }
+}
+\end{lstlisting}
+
+\textbf{7. \texttt{\$unwind}} – memecah array menjadi beberapa dokumen
+Sangat berguna untuk data yang memiliki array besar.
 
 \begin{lstlisting}[language=bash]
 { $unwind: "$items" }
