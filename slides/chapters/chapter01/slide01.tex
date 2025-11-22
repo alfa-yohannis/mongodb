@@ -1,0 +1,554 @@
+\documentclass[aspectratio=169, table]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{listings} 
+\usepackage[strings]{underscore}
+\usepackage{caption}
+\usepackage{float}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, trees, positioning}
+
+
+\renewcommand{\lstlistingname}{} 
+
+\makeatletter
+\def\input@path{{../../themes/Pradita}}
+\makeatother
+
+\usetheme{Pradita}
+
+\subtitle{NoSQL with MongoDB}
+
+\title{Session-01:\\\LARGE{Introduction to NoSQL\\and MongoDB}
+%\vspace{5pt}
+}
+\date[Serial]{\scriptsize {PRU/SPMI/FR-BM-18/0222}}
+\author[Pradita]{\small{\textbf{Alfa Yohannis}}}
+
+
+% Define Python language style for listings
+\lstdefinestyle{PythonStyle}{
+    language=Python,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=lines,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    backgroundcolor=\color{lightgray!10},
+    tabsize=2,
+    captionpos=b
+}
+
+\lstdefinelanguage{bash} {
+	keywords={},
+	basicstyle=\ttfamily\small,
+	keywordstyle=\color{blue}\bfseries,
+	ndkeywords={},
+	ndkeywordstyle=\color{purple}\bfseries,
+	sensitive=true,
+	numbers=left,
+	numberstyle=\tiny\color{gray},
+	breaklines=true,
+	frame=lines,
+	backgroundcolor=\color{lightgray!10},
+	tabsize=2,
+	comment=[l]{\#},
+	morecomment=[s]{/*}{*/},
+	commentstyle=\color{gray}\ttfamily,
+	stringstyle=\color{purple}\ttfamily,
+	showstringspaces=false,
+	morestring=[s]{"}{"}
+}
+
+\begin{document}
+
+\frame{\titlepage}
+
+% Add table of contents slide
+\begin{frame}[fragile]{Contents}
+\vspace{15pt}
+\begin{columns}[t]
+\begin{column}{.4\textwidth}
+\tableofcontents[sections={1-4}]
+\end{column}
+\begin{column}{.6\textwidth}
+\tableofcontents[sections={5-7}]
+\end{column}
+\end{columns}
+\end{frame}
+
+
+\section{What is NoSQL}
+
+\begin{frame}[fragile]{What is NoSQL}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item NoSQL refers to a family of non-relational database technologies.
+      \item Does not rely on rigid table-based row–column structures.
+      \item Provides flexible schema for unstructured or fast-changing data.
+      \item Modern interpretation: \textbf{Not Only SQL}, coexisting with SQL.
+      \item Designed for large-scale, diverse, high-speed data.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item Commonly used in IoT, logs, social media, mobile, and streaming systems.
+      \item Enables horizontal scaling and distributed architectures.
+      \item Includes key–value, document, column-family, and graph databases.
+      \item Optimizes performance under heavy distributed workloads.
+      \item This chapter focuses on \textbf{MongoDB}, a leading document database.
+    \end{itemize}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Characteristics of MongoDB}
+
+\begin{frame}[fragile]{Characteristics of MongoDB}
+\vspace{15pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item MongoDB is a document database storing data in JSON-like structures.
+      \item Internally uses BSON, a binary format optimized for speed and rich data types.
+      \item Supports complex structures: nested objects, arrays, and heterogeneous elements.
+      \item Provides flexible schema—documents in a collection need not share identical structure.
+      \item Avoids heavy migrations, ideal for evolving data models.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item Supports horizontal scalability through sharding for high-volume workloads.
+      \item Ensures high availability with replica sets storing multiple data copies.
+      \item Offers powerful querying beyond simple lookups.
+      \item Aggregation Pipeline enables in-database transformation, grouping, calculations, and analytics.
+      \item Reduces the need for external processing systems.
+    \end{itemize}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{When to Use MongoDB}
+
+\begin{frame}[fragile]{When to Use MongoDB}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item Ideal when applications need flexible and fast-evolving data structures.
+      \item Suitable for dynamic-content systems: CMS, blogs, product catalogs.
+      \item Works well for unpredictable user-generated data.
+      \item Common choice for high-throughput workloads: logs, cloud services, IoT, social platforms.
+      \item Supports horizontal scaling to distribute heavy workloads.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item Great for rapid development without constant schema migrations.
+      \item JSON-like document model integrates easily with JS/Node.js and modern web frameworks.
+      \item Not ideal for systems requiring strict, complex transactional consistency.
+      \item Banking \& payment-like systems fit relational databases better.
+      \item Understanding strengths and limits helps determine if MongoDB fits a given architecture.
+    \end{itemize}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Installing MongoDB Community Edition}
+
+\begin{frame}[fragile]{Installing MongoDB Community Edition}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.45\textwidth}
+    \begin{itemize}
+      \item Use the official MongoDB repository for up-to-date packages.
+      \item Steps: add GPG key, add repository, update index, install.
+      \item Applies to Ubuntu/Debian; similar flow for other systems.
+      \item Installed packages include \texttt{mongod}, \texttt{mongosh}, and admin tools.
+      \item Repository installation simplifies future upgrades.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Import GPG key
+wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc \
+  | sudo apt-key add -
+
+# Add MongoDB repository
+echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu \
+$(lsb_release -sc)/mongodb-org/7.0 multiverse" \
+  | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Update index
+sudo apt update
+
+# Install MongoDB
+sudo apt install -y mongodb-org
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Running MongoDB Service}
+
+\begin{frame}[fragile]{Running MongoDB Service}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item MongoDB runs as a background service via \texttt{systemctl}.
+      \item Start, enable, and check service status after installation.
+      \item Status should show \texttt{active (running)} if successful.
+      \item Default port: 27017; logs show data path and config info.
+      \item Test connectivity using \texttt{mongosh}.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Start MongoDB server
+sudo systemctl start mongod
+
+# Enable on boot
+sudo systemctl enable mongod
+
+# Check status
+sudo systemctl status mongod
+
+# Test connection
+mongosh
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Installing MongoDB Shell (mongosh)}
+
+\begin{frame}[fragile]{Installing MongoDB Shell (mongosh)}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item Some systems do not install \texttt{mongosh} automatically.
+      \item \texttt{mongosh} is the modern MongoDB CLI replacing \texttt{mongo}.
+      \item Install from official MongoDB package sources.
+      \item Verify installation via \texttt{mongosh --version}.
+      \item Once installed, connect to MongoDB using \texttt{mongosh}.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Install MongoDB Shell
+sudo apt install -y mongodb-mongosh
+
+# Check installed version
+mongosh --version
+
+# Connect to MongoDB
+mongosh
+
+# Example startup output
+Connecting to: mongodb://127.0.0.1:27017
+Using MongoDB: 7.0.x
+Using Mongosh: 2.x.x
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Directory Structure and Basic Configuration}
+
+\begin{frame}[fragile]{Directory Structure and Basic Configuration}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item MongoDB stores data and logs in predefined directories.
+      \item Main configuration file: \texttt{/etc/mongod.conf}.
+      \item Configuration controls port, paths, security, and networking.
+      \item Edit config file, then restart service to apply changes.
+      \item Errors appear in log files under \texttt{/var/log/mongodb/}.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Data directory
+/var/lib/mongodb/
+
+# Log directory
+/var/log/mongodb/
+
+# Main config file
+/etc/mongod.conf
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Edit config
+sudo nano /etc/mongod.conf
+
+# Example inside file
+net:
+  port: 27018
+  bindIp: 127.0.0.1
+
+# Restart service
+sudo systemctl restart mongod
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\section{Connecting with mongosh}
+
+\begin{frame}[fragile]{Connecting with mongosh}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item \texttt{mongosh} is the interactive shell for MongoDB.
+      \item Used for CRUD, creating databases, and testing queries.
+      \item If \texttt{mongod} runs on default port, run \texttt{mongosh} directly.
+      \item Shell displays connection info and active database.
+      \item Commands run immediately at the \texttt{test>} prompt.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Connect to local MongoDB
+mongosh
+
+# Example output
+Connecting to: mongodb://127.0.0.1:27017/
+Using MongoDB: 7.0.3
+Using Mongosh: 2.1.1
+test>
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Create database and insert data
+use toko_online
+db.produk.insertOne({ nama: "Laptop", harga: 15000000 })
+db.produk.find()
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Custom Ports and Authenticated Connections}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item \texttt{mongosh} accepts explicit connection URIs.
+      \item Useful for custom ports or remote servers.
+      \item Authentication uses standard MongoDB URI syntax.
+      \item Specify database (e.g., \texttt{/admin}) when authenticating.
+      \item Ideal for admin tasks and quick verification.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Connect to custom port
+mongosh "mongodb://localhost:27018"
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Connect with authentication
+mongosh "mongodb://userku:rahasia@localhost:27017/admin"
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Example interactive prompt after login
+Connecting to: mongodb://localhost:27017/
+Using MongoDB: 7.x
+Using Mongosh: 2.x
+admin>
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Connecting Through MongoDB Compass}
+
+\begin{frame}[fragile]{Connecting Through MongoDB Compass}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item Compass is a GUI for connecting to MongoDB without shell commands.
+      \item Local servers use the default URI: \texttt{mongodb://localhost:27017/}.
+      \item After connecting, it displays databases, collections, and JSON data.
+      \item Includes a visual Aggregation builder for quick pipeline testing.
+      \item Supports authentication, remote hosts, and Atlas clusters.
+      \item Configuration is handled entirely through forms.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Default connection URI
+mongodb://localhost:27017/
+\end{lstlisting}
+
+    Features available after connecting:
+    \begin{itemize}
+      \item Browse collections and view JSON documents.
+      \item Create queries with visual filters.
+      \item Build Aggregation Pipelines.
+      \item Export results easily.
+    \end{itemize}
+
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\section{Connecting from Python}
+
+\begin{frame}[fragile]{Connecting from Python}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.45\textwidth}
+    \begin{itemize}
+      \item Python connects to MongoDB using the official \texttt{pymongo} library.
+      \item Install via \texttt{pip} before use.
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+# Install PyMongo
+pip install pymongo
+\end{lstlisting}
+      \item Basic steps: create client, choose database, choose collection.
+      \item Demonstration shows inserting and reading a document.
+      \item Output displays the generated \texttt{ObjectId}.
+    \end{itemize}
+
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+
+
+\begin{lstlisting}[style=PythonStyle,basicstyle=\ttfamily\scriptsize]
+from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["toko_online"]
+produk = db["produk"]
+
+insert_result = produk.insert_one({
+    "nama": "Keyboard Mechanical",
+    "harga": 750000,
+    "stok": 20
+})
+
+print("ID:", insert_result.inserted_id)
+
+hasil = produk.find_one({ "nama": "Keyboard Mechanical" })
+print("Found:", hasil)
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Authenticated URI and Console Output}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item Console output shows inserted ID and retrieved document.
+      \item Connection URI can include username, password, and options.
+      \item \texttt{authSource} selects the database used for authentication.
+      \item URIs can also define read preferences and replica sets.
+      \item Python apps can use full MongoDB features: CRUD, aggregation, indexes.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+\begin{lstlisting}[language=bash,basicstyle=\ttfamily\scriptsize]
+ID: 67aacd1b2f1c9eaaad03f912
+Found: {'_id': ObjectId('67aacd1b2f1c9...'),
+        'nama': 'Keyboard Mechanical',
+        'harga': 750000,
+        'stok': 20}
+\end{lstlisting}
+
+\begin{lstlisting}[style=PythonStyle,basicstyle=\ttfamily\scriptsize]
+# Authenticated URI
+client = MongoClient(
+  "mongodb://userku:rahasia@localhost:27017/"
+  "?authSource=admin"
+)
+\end{lstlisting}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+\section{Summary}
+
+\begin{frame}{Summary}
+\vspace{20pt}
+\begin{columns}[T]
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item \textbf{NoSQL Overview.} MongoDB offers flexible schema, document storage, and scalability.
+      \item \textbf{Data Model.} Uses BSON, nested docs, and Aggregation Pipeline for server-side processing.
+      \item \textbf{Scalability \& Availability.} Replica sets improve reliability; sharding distributes data.
+      \item \textbf{Setup Essentials.} Installation of \texttt{mongod}, \texttt{mongosh}, and Compass.
+    \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \begin{itemize}
+      \item \textbf{Configuration Basics.} Key directories, config files, and service control via \texttt{systemctl}.
+      \item \textbf{Connection Methods.} Access using \texttt{mongosh}, Compass, and Python (\texttt{pymongo}).
+      \item \textbf{Outcome.} Foundation established for building scalable MongoDB applications.
+    \end{itemize}
+  \end{column}
+
+\end{columns}
+\end{frame}
+
+
+
+\end{document}

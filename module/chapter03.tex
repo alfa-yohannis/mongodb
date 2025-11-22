@@ -1,5 +1,8 @@
 \chapter{Advanced Querying and Indexing for Performance Optimization}
 
+\noindent
+Bab ini mengupas bagaimana memanfaatkan kemampuan MongoDB secara lebih mendalam melalui kombinasi \textit{advanced querying} dan perancangan indeks yang efektif untuk mengoptimalkan performa aplikasi. Pada bagian awal, Anda akan mempelajari cara menyusun filter kompleks menggunakan operator perbandingan seperti \texttt{\$gt}, \texttt{\$lt}, \texttt{\$gte}, \texttt{\$lte}, dan \texttt{\$ne}, serta operator logika seperti \texttt{\$and}, \texttt{\$or}, \texttt{\$not}, dan \texttt{\$nor}. Selanjutnya, Anda akan melihat bagaimana MongoDB menangani pencarian pada array dan \textit{embedded documents} melalui dot notation, \texttt{\$in}, \texttt{\$all}, dan \texttt{\$elemMatch}. Pembahasan kemudian berlanjut pada membuat \textit{Aggregation Pipeline}, mekanisme pemrosesan bertahap yang mendukung kata kunci \texttt{\$match}, \texttt{\$project}, \texttt{\$group}, \texttt{\$sort}, \texttt{\$lookup}, dan \texttt{\$unwind} untuk analitik dan transformasi data langsung di sisi server. Bagian kedua bab ini berfokus pada indexing: mulai dari indeks dasar dan \textit{multikey index}, \textit{compound index} yang disusun berdasarkan pola query nyata, hingga \textit{text index} untuk pencarian berbasis kata dan relevansi. Bab ini diakhiri dengan berbagai praktik terbaik indexing—mulai dari selektivitas, \textit{prefix rule}, \texttt{partial index}, penggunaan \texttt{explain()}, hingga pertimbangan trade-off antara beban tulis dan baca—sehingga Anda dapat merancang indeks yang efisien, skalabel, dan selaras dengan kebutuhan aplikasi nyata.
+
 
 \section{Advanced Querying}
 
@@ -916,7 +919,7 @@ Menghapus indeks yang tidak digunakan juga merupakan bagian dari manajemen perfo
 db.produk.dropIndex("kategori_1_harga_1")
 \end{lstlisting}
 
-Pemanfaatan fitur \texttt{explain()} juga merupakan praktik wajib. Dengan menambahkan \texttt{.explain("executionStats")}, pengguna dapat mengetahui apakah query menggunakan indeks, berapa jumlah dokumen yang dipindai, dan berapa banyak dokumen yang cocok. Contoh:
+Pemanfaatan fitur \texttt{explain()} juga merupakan praktik wajib. Dengan menambahkan perintah \texttt{.explain("executionStats")}, pengguna dapat mengetahui apakah query menggunakan indeks, berapa jumlah dokumen yang dipindai, dan berapa banyak dokumen yang cocok. Contoh:
 
 \begin{lstlisting}[language=bash]
 db.orders.find({ "shipping.city": "Tangerang" })
